@@ -20,7 +20,7 @@ except ImportError:
     pytz = None
 
 
-LOGIN_URL = 'https://home.nest.com/user/login'
+LOGIN_URL = 'https://api.honeywell.com/oauth2/authorize'
 AWAY_MAP = {'on': True,
             'away': True,
             'off': False,
@@ -67,7 +67,7 @@ FAN_MAP = {'auto on': 'auto',
 LowHighTuple = collections.namedtuple('LowHighTuple', ('low', 'high'))
 
 
-class NestTZ(datetime.tzinfo):
+class lyricTZ(datetime.tzinfo):
     def __init__(self, gmt_offset):
         self._offset = datetime.timedelta(hours=float(gmt_offset))
         self._name = gmt_offset
@@ -86,7 +86,7 @@ class NestTZ(datetime.tzinfo):
         return datetime.timedelta(0)
 
 
-class NestAuth(auth.AuthBase):
+class lyricAuth(auth.AuthBase):
     def __init__(self, username, password, auth_callback=None, session=None,
                  access_token=None, access_token_cache_file=None):
         self._res = {}
@@ -236,7 +236,7 @@ class Weather(object):
                 self._tz = pytz.timezone(weather['location']['timezone_long'])
 
             else:
-                self._tz = NestTZ(weather['location']['gmt_offset'])
+                self._tz = lyricTZ(weather['location']['gmt_offset'])
 
     @property
     def _current(self):
@@ -263,27 +263,27 @@ class Weather(object):
         return [Forecast(f, self._tz) for f in self._hourly]
 
 
-class NestBase(object):
-    def __init__(self, serial, nest_api, local_time=False):
+class lyricBase(object):
+    def __init__(self, serial, lyric_api, local_time=False):
         self._serial = serial
-        self._nest_api = nest_api
+        self._lyric_api = lyric_api
         self._local_time = local_time
 
     def __repr__(self):
         return '<%s: %s>' % (self.__class__.__name__, self._repr_name)
 
     def _set(self, what, data):
-        url = '%s/v2/put/%s.%s' % (self._nest_api.urls['transport_url'],
+        url = '%s/v2/put/%s.%s' % (self._lyric_api.urls['transport_url'],
                                    what, self._serial)
-        response = self._nest_api._session.post(url, data=json.dumps(data))
+        response = self._lyric_api._session.post(url, data=json.dumps(data))
         response.raise_for_status()
 
-        self._nest_api._bust_cache()
+        self._lyric_api._bust_cache()
 
     @property
     def _weather(self):
         merge_code = self.postal_code + ',' + self.country_code
-        return self._nest_api._weather[merge_code]
+        return self._lyric_api._weather[merge_code]
 
     @property
     def weather(self):
@@ -302,22 +302,22 @@ class NestBase(object):
         return self.name
 
 
-class Device(NestBase):
+class Device(lyricBase):
     @property
     def _device(self):
-        return self._nest_api._status['device'][self._serial]
+        return self._lyric_api._status['device'][self._serial]
 
     @property
     def _shared(self):
-        return self._nest_api._status['shared'][self._serial]
+        return self._lyric_api._status['shared'][self._serial]
 
     @property
     def _link(self):
-        return self._nest_api._status['link'][self._serial]
+        return self._lyric_api._status['link'][self._serial]
 
     @property
     def _track(self):
-        return self._nest_api._status['track'][self._serial]
+        return self._lyric_api._status['track'][self._serial]
 
     @property
     def _repr_name(self):
@@ -329,7 +329,7 @@ class Device(NestBase):
     @property
     def structure(self):
         return Structure(self._link['structure'].split('.')[-1],
-                         self._nest_api, self._local_time)
+                         self._lyric_api, self._local_time)
 
     @property
     def where(self):
@@ -578,10 +578,10 @@ class Device(NestBase):
         self._set('device', data)
 
 
-class ProtectDevice(NestBase):
+class ProtectDevice(lyricBase):
     @property
     def _device(self):
-        return self._nest_api._status['topaz'][self._serial]
+        return self._lyric_api._status['topaz'][self._serial]
 
     @property
     def _repr_name(self):
@@ -593,7 +593,7 @@ class ProtectDevice(NestBase):
     @property
     def structure(self):
         return Structure(self._device['structure_id'],
-                         self._nest_api, self._local_time)
+                         self._lyric_api, self._local_time)
 
     @property
     def where(self):
@@ -829,10 +829,10 @@ class ProtectDevice(NestBase):
         return self._device['wired_or_battery']
 
 
-class Structure(NestBase):
+class Structure(lyricBase):
     @property
     def _structure(self):
-        return self._nest_api._status['structure'][self._serial]
+        return self._lyric_api._status['structure'][self._serial]
 
     def _set_away(self, value, auto_away=False):
         self._set('structure', {'away': AWAY_MAP[value],
@@ -853,15 +853,15 @@ class Structure(NestBase):
 
     @property
     def devices(self):
-        return [Device(devid.split('.')[-1], self._nest_api,
+        return [Device(devid.split('.')[-1], self._lyric_api,
                        self._local_time)
                 for devid in self._structure.get('devices', [])]
 
     @property
     def protectdevices(self):
-        return [ProtectDevice(topazid.split('.')[-1], self._nest_api,
+        return [ProtectDevice(topazid.split('.')[-1], self._lyric_api,
                               self._local_time)
-                for topazid in self._nest_api._status.get('topaz', [])]
+                for topazid in self._lyric_api._status.get('topaz', [])]
 
     @property
     def dr_reminder_enabled(self):
@@ -937,7 +937,7 @@ class Structure(NestBase):
 
     @property
     def _wheres(self):
-        return self._nest_api._status['where'][self._serial]['wheres']
+        return self._lyric_api._status['where'][self._serial]['wheres']
 
     @property
     def wheres(self):
@@ -982,8 +982,8 @@ class Structure(NestBase):
 
 
 class WeatherCache(object):
-    def __init__(self, nest_api, cache_ttl=270):
-        self._nest_api = nest_api
+    def __init__(self, lyric_api, cache_ttl=270):
+        self._lyric_api = lyric_api
         self._cache_ttl = cache_ttl
         self._cache = {}
 
@@ -992,8 +992,8 @@ class WeatherCache(object):
         now = time.time()
 
         if not value or now - last_update > self._cache_ttl:
-            url = self._nest_api.urls['weather_url'] + postal_code
-            response = self._nest_api._session.get(url)
+            url = self._lyric_api.urls['weather_url'] + postal_code
+            response = self._lyric_api._session.get(url)
             response.raise_for_status()
             value = response.json()[postal_code]
             self._cache[postal_code] = (value, now)
@@ -1001,9 +1001,9 @@ class WeatherCache(object):
         return value
 
 
-class Nest(object):
+class lyric(object):
     def __init__(self, username, password, cache_ttl=270,
-                 user_agent='Nest/1.1.0.10 CFNetwork/548.0.4',
+                 user_agent='lyric/1.1.0.10 CFNetwork/548.0.4',
                  access_token=None, access_token_cache_file=None,
                  local_time=False):
         self._urls = {}
@@ -1031,12 +1031,12 @@ class Nest(object):
 
         self._user_agent = user_agent
         self._session = requests.Session()
-        auth = NestAuth(username, password, auth_callback=auth_callback,
+        auth = lyricAuth(username, password, auth_callback=auth_callback,
                         session=self._session, access_token=access_token,
                         access_token_cache_file=access_token_cache_file)
         self._session.auth = auth
 
-        headers = {'user-agent': 'Nest/1.1.0.10 CFNetwork/548.0.4',
+        headers = {'user-agent': 'lyric/1.1.0.10 CFNetwork/548.0.4',
                    'X-nl-protocol-version': '1'}
         self._session.headers.update(headers)
 

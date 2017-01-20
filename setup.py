@@ -6,27 +6,19 @@ import io
 from setuptools import setup
 
 
-# NOTE(jkoelker) Subjective guidelines for Major.Minor.Micro ;)
-#                Bumping Major means an API contract change.
-#                Bumping Minor means API bugfix or new functionality.
-#                Bumping Micro means CLI change of any kind unless it is
-#                    significant enough to warrant a minor/major bump.
-version = '2.12.0'
+version = '0.0.1'
 
 
-setup(name='python-nest',
+setup(name='python-lyric',
       version=version,
-      description='Python API and command line tool for talking to the '
-                  'Nest™ Thermostat',
+      description='Python API for talking to the '
+                  'Honeywell Lyric™ Thermostat',
       long_description=io.open('README.rst', encoding='UTF-8').read(),
-      keywords='nest thermostat',
-      author='Jason Kölker',
-      author_email='jason@koelker.net',
-      url='https://github.com/jkoelker/python-nest/',
-      packages=['nest'],
+      keywords='honeywell lyric thermostat',
+      author='Bram Kragten',
+      author_email='mail@bramkragten.nl',
+      url='https://github.com/bramkragten/python-lyric/',
+      packages=['lyric'],
       install_requires=['requests>=1.0.0',
-                        'six>=1.10.0'],
-      entry_points={
-          'console_scripts': ['nest=nest.command_line:main'],
-      }
+                        'six>=1.10.0']
       )

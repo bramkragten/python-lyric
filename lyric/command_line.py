@@ -2,7 +2,7 @@
 # -*- coding:utf-8 -*-
 
 '''
-nest.py -- a python interface to the Nest Thermostats
+lyric.py -- a python interface to the Honeywell Lyric Thermostats
 '''
 
 from __future__ import print_function
@@ -11,7 +11,7 @@ import argparse
 import os
 import sys
 
-from . import nest
+from . import lyric
 from . import utils
 from . import helpers
 
@@ -29,7 +29,7 @@ def parse_args():
 
     defaults = helpers.get_config(config_path=args.conf)
 
-    description = 'Command line interface to Nest™ Thermostats'
+    description = 'Command line interface to lyric™ Thermostats'
     parser = argparse.ArgumentParser(description=description,
                                      parents=[conf_parser])
 
@@ -43,16 +43,16 @@ def parse_args():
                         help='auth access token', metavar='TOKEN')
 
     parser.add_argument('-u', '--user', dest='user',
-                        help='username for nest.com', metavar='USER')
+                        help='username for lyric.com', metavar='USER')
 
     parser.add_argument('-p', '--password', dest='password',
-                        help='password for nest.com', metavar='PASSWORD')
+                        help='password for lyric.com', metavar='PASSWORD')
 
     parser.add_argument('-c', '--celsius', dest='celsius', action='store_true',
                         help='use celsius instead of farenheit')
 
     parser.add_argument('-s', '--serial', dest='serial',
-                        help='optional, specify serial number of nest '
+                        help='optional, specify serial number of lyric '
                              'thermostat to talk to')
 
     parser.add_argument('-S', '--structure', dest='structure',
@@ -60,7 +60,7 @@ def parse_args():
                              'scope device actions')
 
     parser.add_argument('-i', '--index', dest='index', default=0, type=int,
-                        help='optional, specify index number of nest to '
+                        help='optional, specify index number of lyric to '
                              'talk to')
 
     subparsers = parser.add_subparsers(dest='command',
@@ -132,7 +132,7 @@ def main():
     # NOTE(jkoelker) Token caching is currently broken
     token_cache = None
 
-    with nest.Nest(args.user, args.password, access_token=args.token,
+    with lyric.lyric(args.user, args.password, access_token=args.token,
                    access_token_cache_file=token_cache) as napi:
         if cmd == 'away':
             structure = None
@@ -167,7 +167,7 @@ def main():
             return
 
         if args.serial:
-            device = nest.Device(args.serial, napi)
+            device = lyric.Device(args.serial, napi)
 
         elif args.structure:
             struct = [s for s in napi.structures if s.name == args.structure]

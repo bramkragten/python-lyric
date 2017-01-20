@@ -5,7 +5,7 @@
 import contextlib
 import os
 
-from . import nest
+from . import lyric
 
 # use six for python2/python3 compatibility
 from six.moves import configparser
@@ -15,7 +15,7 @@ class MissingCredentialsError(ValueError):
     pass
 
 
-def get_config(config_path=None, prog='nest'):
+def get_config(config_path=None, prog='lyric'):
     if not config_path:
         config_path = os.path.sep.join(('~', '.config', prog, 'config'))
 
@@ -24,8 +24,8 @@ def get_config(config_path=None, prog='nest'):
     if os.path.exists(config_file):
         config = configparser.SafeConfigParser()
         config.read([config_file])
-        if config.has_section('nest'):
-            defaults.update(dict(config.items('nest')))
+        if config.has_section('lyric'):
+            defaults.update(dict(config.items('lyric')))
 
     return defaults
 
@@ -38,9 +38,9 @@ def get_auth_credentials(config_path=None):
 
 
 @contextlib.contextmanager
-def nest_login(config_path=None, username=None, password=None, **kwargs):
+def lyric_login(config_path=None, username=None, password=None, **kwargs):
     """
-    This a context manager for creating a Nest object using
+    This a context manager for creating a lyric object using
     authentication credentials either provided as keyword arguments
     or read from the configuration file.
 
@@ -49,8 +49,8 @@ def nest_login(config_path=None, username=None, password=None, **kwargs):
         Optional if the the credentials are provided as arguments.
     :param username: Optional if the config file contains the username.
     :param password: Optional if the config file contains the password.
-    :param kwargs: Keyword arguments to pass onto the Nest initializer.
-    :return: Nest object
+    :param kwargs: Keyword arguments to pass onto the lyric initializer.
+    :return: lyric object
     """
 
     credentials_config = get_auth_credentials(config_path)
@@ -60,7 +60,7 @@ def nest_login(config_path=None, username=None, password=None, **kwargs):
         password = credentials_config[1]
 
     if username and password:
-        yield nest.Nest(username, password, **kwargs)
+        yield lyric.lyric(username, password, **kwargs)
     else:
         raise MissingCredentialsError(
             'The login credentials have not been provided.')
