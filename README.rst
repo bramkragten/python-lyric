@@ -1,5 +1,5 @@
 =========================================================
-Python API and command line tool for the Honeywell Lyric™ Thermostat
+Python API for the Honeywell Lyric™ Thermostat
 =========================================================
 
 
