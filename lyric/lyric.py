@@ -20,7 +20,11 @@ except ImportError:
     pytz = None
 
 
-LOGIN_URL = 'https://api.honeywell.com/oauth2/authorize'
+LOGIN_URL = 'https://api.honeywell.com/oauth2/token'
+BASE_URL = 'https://api.honeywell.com/v2/'
+
+API_KEY = 'j9ShGaDTsOWlykvAeJCNcMpO76gGwGq6'
+
 AWAY_MAP = {'on': True,
             'away': True,
             'off': False,
@@ -87,11 +91,10 @@ class lyricTZ(datetime.tzinfo):
 
 
 class lyricAuth(auth.AuthBase):
-    def __init__(self, username, password, auth_callback=None, session=None,
+    def __init__(self, code, auth_callback=None, session=None,
                  access_token=None, access_token_cache_file=None):
         self._res = {}
-        self.username = username
-        self.password = password
+        self.code = code
         self.auth_callback = auth_callback
         self._access_token_cache_file = access_token_cache_file
 
@@ -121,8 +124,24 @@ class lyricAuth(auth.AuthBase):
             self.auth_callback(self._res)
 
     def _login(self, headers=None):
-        data = {'username': self.username, 'password': self.password}
+        data = {'grant_type': 'authorization_code', 'code': self.code, 'redirect_uri': 'https://hass.deproducties.com:8123/lyric'}
+        headers = {'Authorization': 'Basic ajlTaEdhRFRzT1dseWt2QWVKQ05jTXBPNzZnR3dHcTY6dnR0M3Fmc3BBaHpnTEx5VQ==', 'Accept': 'application/json'}
+        post = requests.post
 
+        if self._session:
+            session = self._session()
+            post = session.post
+
+        response = post(LOGIN_URL, data=data, headers=headers)
+        response.raise_for_status()
+        self._res = response.json()
+      
+        self._cache()
+        self._callback(self._res)
+
+    def _refresh_login(self, headers=None):
+        data = {'grant_type': 'refresh_token', 'refresh_token': self._refresh_token}
+        headers = {'Authorization': 'Basic ajlTaEdhRFRzT1dseWt2QWVKQ05jTXBPNzZnR3dHcTY6dnR0M3Fmc3BBaHpnTEx5VQ==', 'Accept': 'application/json'}
         post = requests.post
 
         if self._session:
@@ -133,7 +152,6 @@ class lyricAuth(auth.AuthBase):
         response.raise_for_status()
         self._res = response.json()
 
-        self._cache()
         self._callback(self._res)
 
     def _perhaps_relogin(self, r, **kwargs):
@@ -141,7 +159,7 @@ class lyricAuth(auth.AuthBase):
             self._login(r.headers.copy())
             req = r.request.copy()
             req.hooks = hooks.default_hooks()
-            req.headers['Authorization'] = 'Basic ' + self.access_token
+            req.headers['Authorization'] = 'Bearer ' + self.access_token
 
             adapter = self._adapter
             if self._session:
@@ -1001,43 +1019,36 @@ class WeatherCache(object):
         return value
 
 
-class lyric(object):
-    def __init__(self, username, password, cache_ttl=270,
-                 user_agent='lyric/1.1.0.10 CFNetwork/548.0.4',
+class Lyric(object):
+    def __init__(self, code, cache_ttl=270,
+                 user_agent='python-lyric/0.1',
                  access_token=None, access_token_cache_file=None,
                  local_time=False):
-        self._urls = {}
-        self._limits = {}
-        self._user = None
-        self._userid = None
-        self._weave = None
-        self._staff = False
-        self._superuser = False
-        self._email = None
+        self._refresh_token = None;
+        self._expires_in = None;
+        self._access_token = None;
         self._cache_ttl = cache_ttl
         self._cache = (None, 0)
         self._weather = WeatherCache(self)
         self._local_time = local_time
 
         def auth_callback(result):
-            self._urls = result['urls']
-            self._limits = result['limits']
-            self._user = result['user']
-            self._userid = result['userid']
-            self._weave = result['weave']
-            self._staff = result['is_staff']
-            self._superuser = result['is_superuser']
-            self._email = result['email']
+            self._refresh_token = result['refresh_token'];
+            self._expires_in = result['expires_in'];
+            self._access_token = result['access_token'];
+            self._token_time = time.time()
+            headers = {"Authorization": "Bearer %s" %self._access_token}
+            self._session.headers.update(headers)
 
         self._user_agent = user_agent
         self._session = requests.Session()
-        auth = lyricAuth(username, password, auth_callback=auth_callback,
+        auth = lyricAuth(code, auth_callback=auth_callback,
                         session=self._session, access_token=access_token,
                         access_token_cache_file=access_token_cache_file)
         self._session.auth = auth
-
-        headers = {'user-agent': 'lyric/1.1.0.10 CFNetwork/548.0.4',
-                   'X-nl-protocol-version': '1'}
+        self._session.auth._login()
+        
+        headers = {'user-agent': self._user_agent}
         self._session.headers.update(headers)
 
     def __enter__(self):
@@ -1045,6 +1056,26 @@ class lyric(object):
 
     def __exit__(self, exc_type, exc_value, traceback):
         return False
+
+    @property
+    def locations(self):
+        value, last_update = self._cache
+        now = time.time()
+
+        #url = self.urls['transport_url'] + '/v2/mobile/' + self.user
+
+        #if now - self._token_time > self._expires_in:
+        #    lyricReAuth()
+
+        if not value or now - last_update > self._cache_ttl:
+            url = BASE_URL + 'locations?apikey=' + API_KEY
+            response = self._session.get(url)
+            print(response)
+            response.raise_for_status()
+            value = response.json()
+            self._cache = (value, now)
+
+        return value
 
     @property
     def _status(self):
