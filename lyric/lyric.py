@@ -13,8 +13,9 @@ TOKEN_URL = 'https://api.honeywell.com/oauth2/token'
 REFRESH_URL = TOKEN_URL
 
 class lyricBase(object):
-    def __init__(self, device, lyric_api, local_time=False):
-        self._device = device
+    def __init__(self, deviceId, locationId, lyric_api, local_time=False):
+        self._deviceId = deviceId
+        self._locationId = locationId
         self._lyric_api = lyric_api
         self._local_time = local_time
 
@@ -27,19 +28,19 @@ class lyricBase(object):
 
     @property
     def id(self):
-        return self._device['deviceID']
+        return self._deviceId
 
     @property
     def name(self):
-        return self._device['name']
+        return self._lyric_api._device(self._locationId, self._deviceId)['name']
 
     @property
     def _repr_name(self):
         return self.name
 
 class Location(object):
-    def __init__(self, location, lyric_api, local_time=False):
-        self._location = location
+    def __init__(self, locationId, lyric_api, local_time=False):
+        self._locationId = locationId
         self._lyric_api = lyric_api
         self._local_time = local_time
 
@@ -48,51 +49,59 @@ class Location(object):
 
     @property
     def id(self):
-        return self._location['locationID']
+        return self._locationId
+
+    @property
+    def locationId(self):
+        return self._locationId
 
     @property
     def name(self):
-        return self._location['name']
+        return self._lyric_api._location(self._locationId)['name']
+        #return self._location['name']
 
     @property
     def _repr_name(self):
         return self.name
     
     @property
-    def locationID(self):
-        return self.id
-    
-    @property
     def _devices(self):
-        return self._lyric_api._devices(self.locationID)
+        return self._lyric_api._devices(self._locationId)
 
     @property
     def _thermostats(self):
-        return self._lyric_api._devices_type('thermostats', self.locationID)
+        return self._lyric_api._devices_type('thermostats', self._locationId)
     
     @property
     def _waterLeakDetectors(self):
-        return self._lyric_api._devices_type('waterLeakDetectors', self.locationID)
+        return self._lyric_api._devices_type('waterLeakDetectors', self._locationId)
     
     @property
     def devices(self):
-        return [Device(device, self, self._local_time)
-                for device in self._devices]
+        if 'deviceID' in self._devices[0]:
+            return [Device(device['deviceID'], self._locationId, self._lyric_api, 
+                           self._local_time)
+                    for device in self._devices]
 
     @property
     def thermostats(self):
-        return [Thermostat(thermostat, self, self._local_time)
-                for thermostat in self._thermostats]
+        if 'deviceID' in self._thermostats[0]:
+            return [Thermostat(thermostat['deviceID'], self._locationId, 
+                               self._lyric_api, self._local_time)
+                    for thermostat in self._thermostats]
 
     @property
     def waterLeakDetectors(self):
-        return [WaterLeakDetector(waterLeakDetector, self, self._local_time)
-                for waterLeakDetector in self._waterLeakDetectors]
+        if 'deviceID' in self._waterLeakDetectors[0]:
+            return [WaterLeakDetector(waterLeakDetector['deviceID'], 
+                                      self._locationId, self._lyric_api, 
+                                      self._local_time)
+                    for waterLeakDetector in self._waterLeakDetectors]
 
 class Device(lyricBase):
     @property
     def displayedOutdoorHumidity(self):
-        return self._device['displayedOutdoorHumidity']
+        return self._lyric_api._device(self._locationId, self._deviceId)['displayedOutdoorHumidity']
 
     #@fan.setter
     #def fan(self, value):
@@ -101,12 +110,30 @@ class Device(lyricBase):
 class Thermostat(lyricBase):
     @property
     def displayedOutdoorHumidity(self):
-        return self._device['displayedOutdoorHumidity']
+        return self._lyric_api._device(self._locationId, self._deviceId)['displayedOutdoorHumidity']
+
+    @property
+    def indoorTemperature(self):
+        return self._lyric_api._device(self._locationId, self._deviceId)['indoorTemperature']
+
+    @property
+    def outdoorTemperature(self):
+        return self._lyric_api._device(self._locationId, self._deviceId)['outdoorTemperature']
+
+    @property
+    def indoorHumidity(self):
+        if 'indoorHumidity' in self._lyric_api._device(self._locationId, self._deviceId):
+            return self._lyric_api._device(self._locationId, self._deviceId)['indoorHumidity']
+
+    @property
+    def indoorHumidityStatus(self):
+        if 'indoorHumidityStatus' in self._lyric_api._device(self._locationId, self._deviceId):
+            return self._lyric_api._device(self._locationId, self._deviceId)['indoorHumidityStatus']
 
 class WaterLeakDetector(lyricBase):
     @property
     def displayedOutdoorHumidity(self):
-        return self._device['displayedOutdoorHumidity']
+        return self._lyric_api._device(self._locationId, self._deviceId)['displayedOutdoorHumidity']
 
 class Lyric(object):
     def __init__(self, client_id, client_secret, cache_ttl=270,
@@ -217,7 +244,6 @@ class Lyric(object):
         params['apikey'] = self._client_id
         query_string = urllib.parse.urlencode(params)
         url = BASE_URL + endpoint + '?' + query_string
-        print(url)
         response = self._lyricApi.get(url, client_id=self._client_id, 
                                       client_secret=self._client_secret)
         response.raise_for_status()
@@ -239,7 +265,12 @@ class Lyric(object):
             cache = (None, 0)
             
         return cache
-            
+    
+    def _location(self, locationId):
+        for location in self._locations:
+            if location['locationID'] == locationId:
+                return location
+        
     @property
     def _locations(self):
         cache_key = 'locations'
@@ -252,26 +283,34 @@ class Lyric(object):
 
         return value
     
-    @property
-    def _devices(self, locationID):
-        cache_key = 'devices-%s' %locationID
+    def _device(self, locationId, deviceId):
+        for device in self._devices(locationId):
+            if device['deviceID'] == deviceId:
+                return device
+    
+    def _devices(self, locationId):
+        cache_key = 'devices-%s' %locationId
         value, last_update = self._checkCache(cache_key)
         now = time.time()
 
         if not value or now - last_update > self._cache_ttl:
-            value = self._get('devices', locationId=locationID)
+            value = self._get('devices', locationId=locationId)
             self._cache[cache_key] = (value, now)
 
         return value
 
-    @property
-    def _devices_type(self, deviceType, locationID):
-        cache_key = 'devices_type-%s-%s' % (deviceType, locationID)
+    def _device_type(self, locationId, deviceType, deviceId):
+        for device in self._devices_type(deviceType, locationId):
+            if device['deviceID'] == deviceId:
+                return device
+
+    def _devices_type(self, deviceType, locationId):
+        cache_key = 'devices_type-%s-%s' % (deviceType, locationId)
         value, last_update = self._checkCache(cache_key)
         now = time.time()
 
         if not value or now - last_update > self._cache_ttl:
-            value = self._get('devices/' + deviceType, locationId=locationID)
+            value = self._get('devices/' + deviceType, locationId=locationId)
             self._cache[cache_key] = (value, now)
 
         return value
@@ -284,5 +323,5 @@ class Lyric(object):
 
     @property
     def locations(self):
-        return [Location(location, self, self._local_time)
+        return [Location(location['locationID'], self, self._local_time)
                 for location in self._locations]

@@ -16,18 +16,11 @@ if lapi._token is None:
 
 location = lapi.locations[0]
 
-print (lapi._locations)
+print(location.name)
 
-print(location.locationID)
-print(location.devices[0].displayedOutdoorHumidity)
+print(location.thermostats[0].id)
 
-print(location.thermostats)
-print(location.waterLeakDetectors)
-
-print (lapi._locations)
-
-print(location.locationID)
-print(location.devices[0].displayedOutdoorHumidity)
-
-print(location.thermostats)
-print(location.waterLeakDetectors)
+print(location.thermostats[0].displayedOutdoorHumidity)
+print(location.thermostats[0].indoorTemperature)
+print(location.thermostats[0].outdoorTemperature)
+print(location.thermostats[0].indoorHumidityStatus)
