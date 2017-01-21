@@ -20,5 +20,5 @@ setup(name='python-lyric',
       url='https://github.com/bramkragten/python-lyric/',
       packages=['lyric'],
       install_requires=['requests>=1.0.0',
-                        'six>=1.10.0']
+                        'requests_oauthlib>=0.7.0']
       )
