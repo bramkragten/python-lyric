@@ -23,7 +23,7 @@ class lyricDevice(object):
         return '<%s: %s>' % (self.__class__.__name__, self._repr_name)
 
     def _set(self, endpoint, data, **params):
-        self._lyric_api._post(self, endpoint, data, params)
+        self._lyric_api._post(endpoint, data, **params)
         self._lyric_api._bust_cache_all()
 
     @property
@@ -236,7 +236,7 @@ class Location(object):
 
     @property
     def users(self):
-        return [User(location['userID'], self._lyric_api, self._local_time)
+        return [User(user['userID'], self._locationId, self._lyric_api, self._local_time)
                 for user in self._users]
 
     @property
@@ -285,7 +285,7 @@ class User(object):
     # user.deleted	Unix Timestamp	Date and time account was deleted, negative number if not deleted
     # user.activated	Boolean	True/false if user has been activated
     # user.connectedHomeAccountExists	Boolean
-    def __init__(self, locationId, userId, lyric_api, local_time=False):
+    def __init__(self, userId, locationId, lyric_api, local_time=False):
         self._locationId = locationId
         self._userId = userId
         self._lyric_api = lyric_api
@@ -298,6 +298,10 @@ class User(object):
     def id(self):
         return self._userId
 
+    @property
+    def name(self):
+        return self.username
+    
     @property
     def _repr_name(self):
         return self.username
@@ -416,27 +420,28 @@ class Thermostat(lyricDevice):
         if 'indoorTemperature' in self._lyric_api._device(self._locationId, self._deviceId):
             return self._lyric_api._device(self._locationId, self._deviceId)['indoorTemperature']
 
+    @property
+    def temperatureSetpoint(self):
+        if self.changeableValues['mode'] == 'Heat':
+            return self.changeableValues['heatSetpoint']
+        else:
+            return self.changeableValues['coolSetpoint']
+    
     @temperatureSetpoint.setter
     def temperatureSetpoint(self, setpoint, mode=None):
         if mode is None:
-            if setpoint > indoorTemperature:
+            if setpoint > self.indoorTemperature:
                 mode = 'Heat';
             else:
                 mode = 'Cool';
 
         if mode=='Cool':
-            data = '{'
-                    '"mode": ' + mode + ','
-                    '"coolSetpoint": ' + setpoint + ','
-                    '}'
+            data = '{"mode":  %s,"coolSetpoint": %s}' % (mode, setpoint)
 
         if mode=='Heat':
-            data = '{'
-                    '"mode": ' + mode + ','
-                    '"heatSetpoint": ' + setpoint + ','
-                    '}'
+            data = '{"mode": %s, "heatSetpoint": %s}' % (mode, setpoint)
 
-        self._set(self, 'devices/thermostats/' + self.deviceId, data, locationId:self._locationId):
+        self._set('devices/thermostats/' + self._deviceId, data, locationId=self._locationId)
 
     @property
     def outdoorTemperature(self):
@@ -891,24 +896,20 @@ class Lyric(object):
 
         return value
 
-    @property
     def _user(self, locationId, userId):
-        for user in self._users(userId):
+        for user in self._users(locationId):
             if user['userID'] == userId:
                 return user
 
-    @property
     def _users(self, locationId):
-        value = self._location(locationId)['user']
+        value = self._location(locationId)['users']
         return value
 
-    @property
     def _device(self, locationId, deviceId):
         for device in self._devices(locationId):
             if device['deviceID'] == deviceId:
                 return device
 
-    @property
     def _devices(self, locationId, forceGet=False):
         if forceGet:
             cache_key = 'devices-%s' %locationId
@@ -923,14 +924,16 @@ class Lyric(object):
 
         return value
 
-    @property
     def _device_type(self, locationId, deviceType, deviceId):
         for device in self._devices_type(deviceType, locationId):
             if device['deviceID'] == deviceId:
                 return device
-
-    @property
+    
     def _devices_type(self, deviceType, locationId):
+        cache_key = 'devices_type-%s_%s' % (locationId, deviceType)
+        value, last_update = self._checkCache(cache_key)
+        now = time.time()
+        
         if not value or now - last_update > self._cache_ttl:
             value = self._get('devices/' + deviceType, locationId=locationId)
             self._cache[cache_key] = (value, now)
