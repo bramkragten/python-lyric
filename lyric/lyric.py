@@ -203,10 +203,6 @@ class Location(object):
         return self._lyric_api._location(self._locationId)['zipcode']
 
     @property
-    def users(self):
-        return self._lyric_api._location(self._locationId)['user']
-
-    @property
     def timeZone(self):
         return self._lyric_api._location(self._locationId)['timeZone']
 
@@ -222,15 +218,9 @@ class Location(object):
     def geoFenceEnabled(self):
         return self._lyric_api._location(self._locationId)['geoFenceEnabled']
 
-    # #user	Array	User information
-    # user.userID	Integer	Unique UserID
-    # user.username	String	User's username to login, usually an email address
-    # user.firstname	String	User's first name
-    # user.lastname	String	user last name
-    # user.created	Unix Timestamp	Date and time account was created in epoch format
-    # user.deleted	Unix Timestamp	Date and time account was deleted, negative number if not deleted
-    # user.activated	Boolean	True/false if user has been activated
-    # user.connectedHomeAccountExists	Boolean
+    @property
+    def _users(self):
+        return self._lyric_api._users(self._locationId)
 
     @property
     def _devices(self, forceGet=False):
@@ -243,6 +233,11 @@ class Location(object):
     @property
     def _waterLeakDetectors(self):
         return self._lyric_api._devices_type('waterLeakDetectors', self._locationId)
+
+    @property
+    def users(self):
+        return [User(location['userID'], self._lyric_api, self._local_time)
+                for user in self._users]
 
     @property
     def devices(self):
@@ -280,10 +275,72 @@ class Location(object):
                                        self._lyric_api, self._local_time))
             return devices
 
+class User(object):
+    # User information
+    # user.userID	Integer	Unique UserID
+    # user.username	String	User's username to login, usually an email address
+    # user.firstname	String	User's first name
+    # user.lastname	String	user last name
+    # user.created	Unix Timestamp	Date and time account was created in epoch format
+    # user.deleted	Unix Timestamp	Date and time account was deleted, negative number if not deleted
+    # user.activated	Boolean	True/false if user has been activated
+    # user.connectedHomeAccountExists	Boolean
+    def __init__(self, locationId, userId, lyric_api, local_time=False):
+        self._locationId = locationId
+        self._userId = userId
+        self._lyric_api = lyric_api
+        self._local_time = local_time
+
+    def __repr__(self):
+        return '<%s: %s>' % (self.__class__.__name__, self._repr_name)
+
+    @property
+    def id(self):
+        return self._userId
+
+    @property
+    def _repr_name(self):
+        return self.username
+
+    @property
+    def userID(self):
+        return self._lyric_api._user(self._locationId, self._userId)['userID']
+
+    @property
+    def username(self):
+        return self._lyric_api._user(self._locationId, self._userId)['username']
+
+    @property
+    def firstname(self):
+        return self._lyric_api._user(self._locationId, self._userId)['firstname']
+
+    @property
+    def lastname(self):
+        return self._lyric_api._user(self._locationId, self._userId)['lastname']
+
+    @property
+    def created(self):
+        return self._lyric_api._user(self._locationId, self._userId)['created']
+
+    @property
+    def deleted(self):
+        return self._lyric_api._user(self._locationId, self._userId)['deleted']
+
+    @property
+    def activated(self):
+        return self._lyric_api._user(self._locationId, self._userId)['activated']
+
+    @property
+    def connectedHomeAccountExists(self):
+        return self._lyric_api._user(self._locationId, self._userId)['connectedHomeAccountExists']
+
 class Device(lyricDevice):
     @property
     def unknownType(self):
         return True
+
+    def properties(self):
+        return self._lyric_api._device(self._locationId, self._deviceId)
 
 class Thermostat(lyricDevice):
     # deviceClass	String	Class of Device, currently "Thermostat" or "LeakDetector"
@@ -789,6 +846,12 @@ class Lyric(object):
 
         return cache
 
+    def _bust_cache_all(self):
+        self._cache = {}
+
+    def _bust_cache(self, cache_key):
+        self._cache[cache_key] = (None, 0)
+
     def _location(self, locationId):
         for location in self._locations:
             if location['locationID'] == locationId:
@@ -806,11 +869,24 @@ class Lyric(object):
 
         return value
 
+    @property
+    def _user(self, locationId, userId):
+        for user in self._users(userId):
+            if user['userID'] == userId:
+                return user
+
+    @property
+    def _users(self, locationId):
+        value = self._location(locationId)['user']
+        return value
+
+    @property
     def _device(self, locationId, deviceId):
         for device in self._devices(locationId):
             if device['deviceID'] == deviceId:
                 return device
 
+    @property
     def _devices(self, locationId, forceGet=False):
         if forceGet:
             cache_key = 'devices-%s' %locationId
@@ -825,23 +901,19 @@ class Lyric(object):
 
         return value
 
+    @property
     def _device_type(self, locationId, deviceType, deviceId):
         for device in self._devices_type(deviceType, locationId):
             if device['deviceID'] == deviceId:
                 return device
 
+    @property
     def _devices_type(self, deviceType, locationId):
         if not value or now - last_update > self._cache_ttl:
             value = self._get('devices/' + deviceType, locationId=locationId)
             self._cache[cache_key] = (value, now)
 
         return value
-
-    def _bust_cache_all(self):
-        self._cache = {}
-
-    def _bust_cache(self, cache_key):
-        self._cache[cache_key] = (None, 0)
 
     @property
     def locations(self):
