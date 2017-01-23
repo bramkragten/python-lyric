@@ -24,7 +24,7 @@ class lyricDevice(object):
 
     def _set(self, endpoint, data, **params):
         self._lyric_api._post(self, endpoint, data, params)
-        #self._lyric_api._bust_cache(cache_key)
+        self._lyric_api._bust_cache_all()
 
     @property
     def id(self):
@@ -34,6 +34,8 @@ class lyricDevice(object):
     def name(self):
         if 'name' in self._lyric_api._device(self._locationId, self._deviceId):
             return self._lyric_api._device(self._locationId, self._deviceId)['name']
+        else:
+            return self.userDefinedDeviceName
 
     @property
     def _repr_name(self):
@@ -836,7 +838,7 @@ class Lyric(object):
         return value
 
     def _bust_cache_all(self):
-        self._cache = {'locations': (None, 0)}
+        self._cache = {}
 
     def _bust_cache(self, cache_key):
         self._cache[cache_key] = (None, 0)
