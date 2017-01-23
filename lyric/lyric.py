@@ -559,11 +559,6 @@ class Thermostat(lyricDevice):
             return self._lyric_api._device(self._locationId, self._deviceId)['devicesettings']
 
     @property
-    def macID(self):
-        if 'macID' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['macID']
-
-    @property
     def displayedOutdoorHumidity(self):
         if 'displayedOutdoorHumidity' in self._lyric_api._device(self._locationId, self._deviceId):
             return self._lyric_api._device(self._locationId, self._deviceId)['displayedOutdoorHumidity']
