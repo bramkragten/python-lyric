@@ -416,6 +416,28 @@ class Thermostat(lyricDevice):
         if 'indoorTemperature' in self._lyric_api._device(self._locationId, self._deviceId):
             return self._lyric_api._device(self._locationId, self._deviceId)['indoorTemperature']
 
+    @temperatureSetpoint.setter
+    def temperatureSetpoint(self, setpoint, mode=None):
+        if mode is None:
+            if setpoint > indoorTemperature:
+                mode = 'Heat';
+            else:
+                mode = 'Cool';
+
+        if mode=='Cool':
+            data = '{'
+                    '"mode": ' + mode + ','
+                    '"coolSetpoint": ' + setpoint + ','
+                    '}'
+
+        if mode=='Heat':
+            data = '{'
+                    '"mode": ' + mode + ','
+                    '"heatSetpoint": ' + setpoint + ','
+                    '}'
+
+        self._set(self, 'devices/thermostats/' + self.deviceId, data, locationId:self._locationId):
+
     @property
     def outdoorTemperature(self):
         if 'outdoorTemperature' in self._lyric_api._device(self._locationId, self._deviceId):
