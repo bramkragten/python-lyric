@@ -3,6 +3,7 @@
 import os
 import time
 import requests
+#import json
 from requests.compat import json
 from requests_oauthlib import OAuth2Session
 import urllib.parse
@@ -23,6 +24,7 @@ class lyricDevice(object):
         return '<%s: %s>' % (self.__class__.__name__, self._repr_name)
 
     def _set(self, endpoint, data, **params):
+        params['locationId'] = self._locationId
         self._lyric_api._post(endpoint, data, **params)
         self._lyric_api._bust_cache_all()
 
@@ -301,7 +303,7 @@ class User(object):
     @property
     def name(self):
         return self.username
-    
+
     @property
     def _repr_name(self):
         return self.username
@@ -411,6 +413,40 @@ class Thermostat(lyricDevice):
     # scheduleType.scheduleType	String	Currently selected schedule type. Would follow the values in scheduleCapabilities.availableScheduleTypes.
     # scheduleType.scheduleSubType	String	Currently selected schedule subtype.
 
+    def updateThermostat(self, mode=None, heatSetpoint=None, coolSetpoint=None, AutoChangeover=None, thermostatSetpointStatus=None):
+        if mode is None:
+            mode = self.operationMode
+        if heatSetpoint is None:
+            heatSetpoint = self.heatSetpoint
+        if coolSetpoint is None:
+            coolSetpoint = self.coolSetpoint
+
+        if 'thermostatSetpointStatus' in self.changeableValues:
+            if thermostatSetpointStatus is None:
+                thermostatSetpointStatus = self.thermostatSetpointStatus
+
+        if 'AutoChangeover' in self.changeableValues:
+            if AutoChangeover is None:
+                AutoChangeover = self.changeableValues['AutoChangeover']
+
+        data = [
+            'mode' = mode,
+            'heatSetpoint' = heatSetpoint,
+            'coolSetpoint' = coolSetpoint
+        ]
+
+        if 'thermostatSetpointStatus' in self.changeableValues:
+            data['thermostatSetpointStatus'] = thermostatSetpointStatus
+        if 'AutoChangeover' in self.changeableValues:
+            data['AutoChangeover'] = AutoChangeover
+
+        data = json.dump(data)
+        self._set('devices/thermostats/' + self._deviceId, data)
+
+    @property
+    def where(self):
+        return self._lyric_api._location(self._locationId)['name']
+
     @property
     def units(self):
         return self._lyric_api._device(self._locationId, self._deviceId)['units']
@@ -421,27 +457,64 @@ class Thermostat(lyricDevice):
             return self._lyric_api._device(self._locationId, self._deviceId)['indoorTemperature']
 
     @property
+    def heatSetpoint(self):
+        return self.changeableValues['heatSetpoint']
+
+    @property
+    def coolSetpoint(self):
+        return self.changeableValues['coolSetpoint']
+
+    @property
+    def thermostatSetpointStatus(self):
+        if 'thermostatSetpointStatus' in self.changeableValues:
+            return self.changeableValues['thermostatSetpointStatus']
+
+    @property
+    def nextPeriodTime(self):
+        if 'nextPeriodTime' in self.changeableValues:
+            return self.changeableValues['nextPeriodTime']
+
+    @property
+    def AutoChangeover(self):
+        if 'AutoChangeover' in self.changeableValues:
+            return self.changeableValues['AutoChangeover']
+
+    @property
+    def operationMode(self):
+        return self.operationStatus['mode']
+
+    @operationMode.setter
+    def operationMode(self, mode):
+        updateThermostat(mode=mode)
+
+    @property
     def temperatureSetpoint(self):
-        if self.changeableValues['mode'] == 'Heat':
+        if self.operationMode == 'Heat':
             return self.changeableValues['heatSetpoint']
         else:
             return self.changeableValues['coolSetpoint']
-    
+
     @temperatureSetpoint.setter
     def temperatureSetpoint(self, setpoint, mode=None):
         if mode is None:
-            if setpoint > self.indoorTemperature:
-                mode = 'Heat';
-            else:
+            if setpoint < self.indoorTemperature and self.can_cool:
                 mode = 'Cool';
+            else:
+                mode = 'Heat';
 
         if mode=='Cool':
-            data = '{"mode":  %s,"coolSetpoint": %s}' % (mode, setpoint)
+            updateThermostat(mode=mode, coolSetpoint=setpoint)
 
         if mode=='Heat':
-            data = '{"mode": %s, "heatSetpoint": %s}' % (mode, setpoint)
+            updateThermostat(mode=mode, heatSetpoint=setpoint)
 
-        self._set('devices/thermostats/' + self._deviceId, data, locationId=self._locationId)
+    @property
+    def can_heat(self):
+        return ("Heat" in self.allowedModes)
+
+    @property
+    def can_cool(self):
+        return ("Cool" in self.allowedModes)
 
     @property
     def outdoorTemperature(self):
@@ -923,12 +996,12 @@ class Lyric(object):
         for device in self._devices_type(deviceType, locationId):
             if device['deviceID'] == deviceId:
                 return device
-    
+
     def _devices_type(self, deviceType, locationId):
         cache_key = 'devices_type-%s_%s' % (locationId, deviceType)
         value, last_update = self._checkCache(cache_key)
         now = time.time()
-        
+
         if not value or now - last_update > self._cache_ttl:
             value = self._get('devices/' + deviceType, locationId=locationId)
             self._cache[cache_key] = (value, now)
