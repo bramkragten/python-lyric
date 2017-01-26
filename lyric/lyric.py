@@ -429,19 +429,19 @@ class Thermostat(lyricDevice):
             if AutoChangeover is None:
                 AutoChangeover = self.changeableValues['AutoChangeover']
 
-        data = [
-            'mode' = mode,
-            'heatSetpoint' = heatSetpoint,
-            'coolSetpoint' = coolSetpoint
-        ]
+        data = {
+            'mode': mode,
+            'heatSetpoint': heatSetpoint,
+            'coolSetpoint': coolSetpoint
+        }
 
         if 'thermostatSetpointStatus' in self.changeableValues:
             data['thermostatSetpointStatus'] = thermostatSetpointStatus
         if 'AutoChangeover' in self.changeableValues:
             data['AutoChangeover'] = AutoChangeover
 
-        data = json.dump(data)
-        self._set('devices/thermostats/' + self._deviceId, data)
+        print(data)
+        self._set('devices/thermostats/' + self._deviceId, data=data)
 
     @property
     def where(self):
@@ -485,7 +485,7 @@ class Thermostat(lyricDevice):
 
     @operationMode.setter
     def operationMode(self, mode):
-        updateThermostat(mode=mode)
+        self.updateThermostat(mode=mode)
 
     @property
     def temperatureSetpoint(self):
@@ -503,10 +503,10 @@ class Thermostat(lyricDevice):
                 mode = 'Heat';
 
         if mode=='Cool':
-            updateThermostat(mode=mode, coolSetpoint=setpoint)
+            self.updateThermostat(mode=mode, coolSetpoint=setpoint)
 
         if mode=='Heat':
-            updateThermostat(mode=mode, heatSetpoint=setpoint)
+            self.updateThermostat(mode=mode, heatSetpoint=setpoint)
 
     @property
     def can_heat(self):
@@ -846,6 +846,10 @@ class Lyric(object):
                                'w') as f:
                     json.dump(token, f)
 
+    @property
+    def token(self):
+        self._token
+    
     @property
     def authorized(self):
         self._lyricApi.authorized
