@@ -3,7 +3,7 @@ import lyric
 client_id = r''
 client_secret = r''
 
-redirect_uri = 'https://hass.deproducties.com:8123/lyric'
+redirect_uri = 'https://hass.deproducties.com/api/lyric'
 app_name = 'Sample'
 token_cache_file = 'token.txt'
 
