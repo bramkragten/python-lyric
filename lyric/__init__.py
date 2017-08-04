@@ -864,7 +864,7 @@ class Lyric(object):
         self._token = token
         if self._token_cache_file is not None:
                 with os.fdopen(os.open(self._token_cache_file,
-                                       os.O_WRONLY | os.O_CREAT, 0o600),
+                                       os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600),
                                'w') as f:
                     json.dump(token, f)
 
