@@ -473,6 +473,10 @@ class Thermostat(lyricDevice):
         if 'thermostatSetpointStatus' in self.changeableValues:
             return self.changeableValues['thermostatSetpointStatus']
 
+    @thermostatSetpointStatus.setter
+    def thermostatSetpointStatus(self, thermostatSetpointStatus):
+        self.updateThermostat(thermostatSetpointStatus=thermostatSetpointStatus)
+
     @property
     def nextPeriodTime(self):
         if 'nextPeriodTime' in self.changeableValues:
@@ -507,10 +511,10 @@ class Thermostat(lyricDevice):
                 mode = 'Heat';
 
         if mode=='Cool':
-            self.updateThermostat(mode=mode, coolSetpoint=setpoint)
+            self.updateThermostat(mode=mode, coolSetpoint=setpoint, thermostatSetpointStatus='TemporaryHold')
 
         if mode=='Heat':
-            self.updateThermostat(mode=mode, heatSetpoint=setpoint)
+            self.updateThermostat(mode=mode, heatSetpoint=setpoint, thermostatSetpointStatus='TemporaryHold')
 
     @property
     def can_heat(self):
