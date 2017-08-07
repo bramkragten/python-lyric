@@ -413,7 +413,7 @@ class Thermostat(lyricDevice):
     # scheduleType.scheduleType    String    Currently selected schedule type. Would follow the values in scheduleCapabilities.availableScheduleTypes.
     # scheduleType.scheduleSubType    String    Currently selected schedule subtype.
 
-    def updateThermostat(self, mode=None, heatSetpoint=None, coolSetpoint=None, AutoChangeover=None, thermostatSetpointStatus=None):
+    def updateThermostat(self, mode=None, heatSetpoint=None, coolSetpoint=None, AutoChangeover=None, thermostatSetpointStatus=None, nextPeriodTime=None):
         if mode is None:
             mode = self.operationMode
         if heatSetpoint is None:
@@ -439,6 +439,8 @@ class Thermostat(lyricDevice):
             data['thermostatSetpointStatus'] = thermostatSetpointStatus
         if 'AutoChangeover' in self.changeableValues:
             data['AutoChangeover'] = AutoChangeover
+        if nextPeriodTime is not None:
+            data['nextPeriodTime'] = nextPeriodTime
 
         self._set('devices/thermostats/' + self._deviceId, data=data)
 
@@ -446,6 +448,10 @@ class Thermostat(lyricDevice):
     def away(self):
         if self._lyric_api._location(self._locationId)['geoFenceEnabled']:
             return (self._lyric_api._location(self._locationId)['geoFences'][0]['geoOccupancy']['withinFence'] == 0)
+    
+    @property
+    def vacationHold(self):
+        return self._lyric_api._device(self._locationId, self._deviceId)['vacationHold']['enabled']
 
     @property
     def where(self):
@@ -476,6 +482,11 @@ class Thermostat(lyricDevice):
     @thermostatSetpointStatus.setter
     def thermostatSetpointStatus(self, thermostatSetpointStatus):
         self.updateThermostat(thermostatSetpointStatus=thermostatSetpointStatus)
+
+    def thermostatSetpointHoldUntil(self, nextPeriodTime, heatSetpoint=None, coolSetpoint=None):
+        if (nextPeriodTime is None):
+            raise ValueError('nextPeriodTime is required')
+        self.updateThermostat(heatSetpoint=heatSetpoint, coolSetpoint=coolSetpoint, thermostatSetpointStatus='HoldUntil', nextPeriodTime=nextPeriodTime)
 
     @property
     def nextPeriodTime(self):
@@ -628,6 +639,11 @@ class Thermostat(lyricDevice):
             return self._lyric_api._device(self._locationId, self._deviceId)['settings']
 
     @property
+    def fanMode(self):
+        if ('settings' in self._lyric_api._device(self._locationId, self._deviceId)) & ('fan' in self.settings):
+            return self.settings["fan"]["changeableValues"]["mode"]
+
+    @property
     def macID(self):
         if 'macID' in self._lyric_api._device(self._locationId, self._deviceId):
             return self._lyric_api._device(self._locationId, self._deviceId)['macID']
@@ -675,7 +691,12 @@ class Thermostat(lyricDevice):
     @property
     def scheduleType(self):
         if 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']
+            return self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']['scheduleType']
+
+    @property
+    def scheduleSubType(self):
+        if 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId):
+            return self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']['scheduleSubType']
 
     # #changeableValues    Object    List of values/settings that can be changed on the thermostat. Used in POST requests.
     # changeableValues.mode    String    Current running mode. Will match values in allowedModes.
