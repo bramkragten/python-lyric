@@ -25,7 +25,7 @@ class lyricDevice(object):
 
     def _set(self, endpoint, data, **params):
         params['locationId'] = self._locationId
-        self._lyric_api._post(endpoint, data, **params)
+        print(self._lyric_api._post(endpoint, data, **params))
         self._lyric_api._bust_cache_all()
 
     @property
@@ -695,7 +695,7 @@ class Thermostat(lyricDevice):
 
     @property
     def scheduleSubType(self):
-        if 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId):
+        if ('scheduleType' in self._lyric_api._device(self._locationId, self._deviceId)) & ('scheduleSubType' in self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']):
             return self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']['scheduleSubType']
 
     # #changeableValues    Object    List of values/settings that can be changed on the thermostat. Used in POST requests.
