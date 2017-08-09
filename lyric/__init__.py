@@ -243,7 +243,6 @@ class Location(object):
 
     @property
     def devices(self):
-        # if 'deviceID' in self._devices[0]:
         devices = []
         for device in self._devices:
             if device['deviceType'] == 'Thermostat':
@@ -259,21 +258,19 @@ class Location(object):
 
     @property
     def thermostats(self):
-        # if 'deviceID' in self._devices[0]:
         thermostats = []
         for device in self._devices:
             if device['deviceType'] == 'Thermostat':
-                devices.append(Thermostat(device['deviceID'], self._locationId,
+                thermostats.append(Thermostat(device['deviceID'], self._locationId,
                                     self._lyric_api, self._local_time))
         return thermostats
 
     @property
     def waterLeakDetectors(self):
-        # if 'deviceID' in self._devices[0]:
         waterLeakDetectors = []
         for device in self._devices:
             if device['deviceType'] == 'Water Leak Detector':
-                devices.append(WaterLeakDetector(device['deviceID'], self._locationId,
+                waterLeakDetectors.append(WaterLeakDetector(device['deviceID'], self._locationId,
                                     self._lyric_api, self._local_time))
         return waterLeakDetectors
 
