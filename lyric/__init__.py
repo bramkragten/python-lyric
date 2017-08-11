@@ -512,6 +512,9 @@ class Thermostat(lyricDevice):
 
     @temperatureSetpoint.setter
     def temperatureSetpoint(self, setpoint):
+        if self.operationMode=='Auto':
+            self.updateThermostat(coolSetpoint=setpoint[0], heatSetpoint=setpoint[1], thermostatSetpointStatus='TemporaryHold')
+        
         if self.operationMode=='Cool':
             self.updateThermostat(coolSetpoint=setpoint, thermostatSetpointStatus='TemporaryHold')
 
