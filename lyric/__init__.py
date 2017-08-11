@@ -980,7 +980,8 @@ class Lyric(object):
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            _LOGGER.error(e.strerror)
+            # print("Error Lyric API: %s with data: %s" % (e, data))
+            _LOGGER.error("Error Lyric API: %s with data: %s" % (e, data))
 
     def _post(self, endpoint, data, **params):
         params['apikey'] = self._client_id
@@ -992,7 +993,8 @@ class Lyric(object):
             response.raise_for_status()
             return response.status_code
         except requests.exceptions.RequestException as e:
-            _LOGGER.error(e.strerror)
+            # print("Error Lyric API: %s with data: %s" % (e, data))
+            _LOGGER.error("Error Lyric API: %s with data: %s" % (e, data))
 
     def _checkCache(self, cache_key):
         if cache_key in self._cache:
