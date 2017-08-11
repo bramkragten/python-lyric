@@ -456,7 +456,8 @@ class Thermostat(lyricDevice):
     
     @property
     def vacationHold(self):
-        return self._lyric_api._device(self._locationId, self._deviceId)['vacationHold']['enabled']
+        if 'vacationHold' in self._lyric_api._device(self._locationId, self._deviceId):
+            return self._lyric_api._device(self._locationId, self._deviceId)['vacationHold']['enabled']
 
     @property
     def where(self):
@@ -647,7 +648,7 @@ class Thermostat(lyricDevice):
 
     @property
     def fanMode(self):
-        if ('settings' in self._lyric_api._device(self._locationId, self._deviceId)) and ('fan' in self.settings):
+        if 'settings' in self._lyric_api._device(self._locationId, self._deviceId) and 'fan' in self.settings:
             return self.settings["fan"]["changeableValues"]["mode"]
 
     @property
@@ -697,8 +698,10 @@ class Thermostat(lyricDevice):
 
     @property
     def scheduleType(self):
-        if 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId):
+        if 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId) and 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']:
             return self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']['scheduleType']
+		elif 'schedule' in self._lyric_api._device(self._locationId, self._deviceId) and 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId)['schedule']:
+            return self._lyric_api._device(self._locationId, self._deviceId)['schedule']['scheduleType']
 
     @property
     def scheduleSubType(self):
