@@ -446,8 +446,13 @@ class Thermostat(lyricDevice):
 
     @property
     def away(self):
-        if self._lyric_api._location(self._locationId)['geoFenceEnabled']:
-            return (self._lyric_api._location(self._locationId)['geoFences'][0]['geoOccupancy']['withinFence'] == 0)
+        if self.scheduleType == 'Geofence':
+            if self._lyric_api._location(self._locationId)['geoFenceEnabled']:
+                return (self._lyric_api._location(self._locationId)['geoFences'][0]['geoOccupancy']['withinFence'] == 0)
+        elif (self.scheduleType == 'Timed' & self.scheduleSubType == 'NA'): # North America
+            return (self.currentSchedulePeriod['period'] == 'Away')
+        elif (self.scheduleType == 'Timed' & self.scheduleSubType == 'EMEA'): # Europe, Middle-East, Africa
+            return (self.currentSchedulePeriod['period'] == 'P2')
     
     @property
     def vacationHold(self):
