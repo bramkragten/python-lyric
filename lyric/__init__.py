@@ -452,7 +452,7 @@ class Thermostat(lyricDevice):
         elif ((self.scheduleType == 'Timed') & (self.scheduleSubType == 'NA')): # North America
             return (self.currentSchedulePeriod['period'] == 'Away')
         elif ((self.scheduleType == 'Timed') & (self.scheduleSubType == 'EMEA')): # Europe, Middle-East, Africa
-            return (self.currentSchedulePeriod['period'] == 'P2')
+            return (self.currentSchedulePeriod['period'] == 'P3')
     
     @property
     def vacationHold(self):
