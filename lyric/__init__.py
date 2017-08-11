@@ -2,11 +2,14 @@
 
 import os
 import time
+import logging
 import requests
 #import json
 from requests.compat import json
 from requests_oauthlib import OAuth2Session
 import urllib.parse
+
+_LOGGER = logging.getLogger(__name__)
 
 BASE_URL = 'https://api.honeywell.com/v2/'
 AUTHORIZATION_BASE_URL = 'https://api.honeywell.com/oauth2/authorize'
@@ -512,10 +515,13 @@ class Thermostat(lyricDevice):
 
     @temperatureSetpoint.setter
     def temperatureSetpoint(self, setpoint):
+        
         if self.thermostatSetpointStatus=='NoHold':
             thermostatSetpointStatus = 'TemporaryHold'
         else:
             thermostatSetpointStatus = self.thermostatSetpointStatus
+
+        # if isinstance(setpoint, tuple):
         if self.operationMode=='Auto':
             self.updateThermostat(coolSetpoint=setpoint[0], heatSetpoint=setpoint[1], thermostatSetpointStatus=thermostatSetpointStatus)
         
@@ -968,19 +974,25 @@ class Lyric(object):
         params['apikey'] = self._client_id
         query_string = urllib.parse.urlencode(params)
         url = BASE_URL + endpoint + '?' + query_string
-        response = self._lyricApi.get(url, client_id=self._client_id,
-                                      client_secret=self._client_secret)
-        response.raise_for_status()
-        return response.json()
+        try:
+            response = self._lyricApi.get(url, client_id=self._client_id,
+                                         client_secret=self._client_secret)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            _LOGGER.error(e.strerror)
 
     def _post(self, endpoint, data, **params):
         params['apikey'] = self._client_id
         query_string = urllib.parse.urlencode(params)
         url = BASE_URL + endpoint + '?' + query_string
-        response = self._lyricApi.post(url, json=data, client_id=self._client_id,
-                                       client_secret=self._client_secret)
-        #response.raise_for_status()
-        return response.status_code
+        try:
+            response = self._lyricApi.post(url, json=data, client_id=self._client_id,
+                                           client_secret=self._client_secret)
+            response.raise_for_status()
+            return response.status_code
+        except requests.exceptions.RequestException as e:
+            _LOGGER.error(e.strerror)
 
     def _checkCache(self, cache_key):
         if cache_key in self._cache:
