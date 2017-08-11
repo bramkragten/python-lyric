@@ -449,9 +449,9 @@ class Thermostat(lyricDevice):
         if self.scheduleType == 'Geofence':
             if self._lyric_api._location(self._locationId)['geoFenceEnabled']:
                 return (self._lyric_api._location(self._locationId)['geoFences'][0]['geoOccupancy']['withinFence'] == 0)
-        elif (self.scheduleType == 'Timed' & self.scheduleSubType == 'NA'): # North America
+        elif ((self.scheduleType == 'Timed') & (self.scheduleSubType == 'NA')): # North America
             return (self.currentSchedulePeriod['period'] == 'Away')
-        elif (self.scheduleType == 'Timed' & self.scheduleSubType == 'EMEA'): # Europe, Middle-East, Africa
+        elif ((self.scheduleType == 'Timed') & (self.scheduleSubType == 'EMEA')): # Europe, Middle-East, Africa
             return (self.currentSchedulePeriod['period'] == 'P2')
     
     @property
@@ -526,14 +526,12 @@ class Thermostat(lyricDevice):
         else:
             thermostatSetpointStatus = self.thermostatSetpointStatus
 
-        # if isinstance(setpoint, tuple):
-        if self.operationMode=='Auto':
+        if isinstance(setpoint, tuple):
+        # if self.operationMode=='Auto':
             self.updateThermostat(coolSetpoint=setpoint[0], heatSetpoint=setpoint[1], thermostatSetpointStatus=thermostatSetpointStatus)
-        
-        if self.operationMode=='Cool':
+        elif self.operationMode=='Cool':
             self.updateThermostat(coolSetpoint=setpoint, thermostatSetpointStatus=thermostatSetpointStatus)
-
-        if self.operationMode=='Heat':
+        elif self.operationMode=='Heat':
             self.updateThermostat(heatSetpoint=setpoint, thermostatSetpointStatus=thermostatSetpointStatus)
 
     @property
@@ -986,7 +984,7 @@ class Lyric(object):
             return response.json()
         except requests.exceptions.RequestException as e:
             # print("Error Lyric API: %s with data: %s" % (e, data))
-            _LOGGER.error("Error Lyric API: %s with data: %s" % (e, data))
+            _LOGGER.error("Error Lyric API: %s" % e)
 
     def _post(self, endpoint, data, **params):
         params['apikey'] = self._client_id
