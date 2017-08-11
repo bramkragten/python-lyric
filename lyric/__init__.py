@@ -449,9 +449,9 @@ class Thermostat(lyricDevice):
         if self.scheduleType == 'Geofence':
             if self._lyric_api._location(self._locationId)['geoFenceEnabled']:
                 return (self._lyric_api._location(self._locationId)['geoFences'][0]['geoOccupancy']['withinFence'] == 0)
-        elif ((self.scheduleType == 'Timed') & (self.scheduleSubType == 'NA')): # North America
+        elif self.scheduleType == 'Timed' and self.scheduleSubType == 'NA': # North America
             return (self.currentSchedulePeriod['period'] == 'Away')
-        elif ((self.scheduleType == 'Timed') & (self.scheduleSubType == 'EMEA')): # Europe, Middle-East, Africa
+        elif self.scheduleType == 'Timed' and self.scheduleSubType == 'EMEA': # Europe, Middle-East, Africa
             return (self.currentSchedulePeriod['period'] == 'P3')
     
     @property
@@ -647,7 +647,7 @@ class Thermostat(lyricDevice):
 
     @property
     def fanMode(self):
-        if ('settings' in self._lyric_api._device(self._locationId, self._deviceId)) & ('fan' in self.settings):
+        if ('settings' in self._lyric_api._device(self._locationId, self._deviceId)) and ('fan' in self.settings):
             return self.settings["fan"]["changeableValues"]["mode"]
 
     @property
@@ -702,7 +702,7 @@ class Thermostat(lyricDevice):
 
     @property
     def scheduleSubType(self):
-        if ('scheduleType' in self._lyric_api._device(self._locationId, self._deviceId)) & ('scheduleSubType' in self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']):
+        if 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId) and 'scheduleSubType' in self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']:
             return self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']['scheduleSubType']
 
     # #changeableValues    Object    List of values/settings that can be changed on the thermostat. Used in POST requests.
