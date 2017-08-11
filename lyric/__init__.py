@@ -700,7 +700,7 @@ class Thermostat(lyricDevice):
     def scheduleType(self):
         if 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId) and 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']:
             return self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']['scheduleType']
-		elif 'schedule' in self._lyric_api._device(self._locationId, self._deviceId) and 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId)['schedule']:
+        elif 'schedule' in self._lyric_api._device(self._locationId, self._deviceId) and 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId)['schedule']:
             return self._lyric_api._device(self._locationId, self._deviceId)['schedule']['scheduleType']
 
     @property
