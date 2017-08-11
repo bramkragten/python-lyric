@@ -422,9 +422,9 @@ class Thermostat(lyricDevice):
             if thermostatSetpointStatus is None:
                 thermostatSetpointStatus = self.thermostatSetpointStatus
 
-        if 'AutoChangeover' in self.changeableValues:
+        if 'autoChangeoverActive' in self.changeableValues:
             if AutoChangeover is None:
-                AutoChangeover = self.changeableValues['AutoChangeover']
+                AutoChangeover = self.changeableValues['autoChangeoverActive']
 
         data = {
             'mode': mode,
@@ -434,8 +434,8 @@ class Thermostat(lyricDevice):
 
         if 'thermostatSetpointStatus' in self.changeableValues:
             data['thermostatSetpointStatus'] = thermostatSetpointStatus
-        if 'AutoChangeover' in self.changeableValues:
-            data['AutoChangeover'] = AutoChangeover
+        if 'autoChangeoverActive' in self.changeableValues:
+            data['autoChangeoverActive'] = AutoChangeover
         if nextPeriodTime is not None:
             data['nextPeriodTime'] = nextPeriodTime
 
@@ -512,14 +512,18 @@ class Thermostat(lyricDevice):
 
     @temperatureSetpoint.setter
     def temperatureSetpoint(self, setpoint):
+        if self.thermostatSetpointStatus=='NoHold':
+            thermostatSetpointStatus = 'TemporaryHold'
+        else:
+            thermostatSetpointStatus = self.thermostatSetpointStatus
         if self.operationMode=='Auto':
-            self.updateThermostat(coolSetpoint=setpoint[0], heatSetpoint=setpoint[1], thermostatSetpointStatus='TemporaryHold')
+            self.updateThermostat(coolSetpoint=setpoint[0], heatSetpoint=setpoint[1], thermostatSetpointStatus=thermostatSetpointStatus)
         
         if self.operationMode=='Cool':
-            self.updateThermostat(coolSetpoint=setpoint, thermostatSetpointStatus='TemporaryHold')
+            self.updateThermostat(coolSetpoint=setpoint, thermostatSetpointStatus=thermostatSetpointStatus)
 
         if self.operationMode=='Heat':
-            self.updateThermostat(heatSetpoint=setpoint, thermostatSetpointStatus='TemporaryHold')
+            self.updateThermostat(heatSetpoint=setpoint, thermostatSetpointStatus=thermostatSetpointStatus)
 
     @property
     def can_heat(self):
