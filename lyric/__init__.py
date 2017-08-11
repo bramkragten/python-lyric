@@ -513,10 +513,10 @@ class Thermostat(lyricDevice):
     @temperatureSetpoint.setter
     def temperatureSetpoint(self, setpoint, mode=None):
         if mode is None:
-            if setpoint < self.indoorTemperature and self.can_cool:
-                mode = 'Cool';
-            else:
-                mode = 'Heat';
+            # if setpoint < self.indoorTemperature and self.can_cool:
+            #     mode = 'Cool';
+            # else:
+            mode = self.operationMode;
 
         if mode=='Cool':
             self.updateThermostat(mode=mode, coolSetpoint=setpoint, thermostatSetpointStatus='TemporaryHold')
