@@ -17,9 +17,10 @@ TOKEN_URL = 'https://api.honeywell.com/oauth2/token'
 REFRESH_URL = TOKEN_URL
 
 class lyricDevice(object):
-    def __init__(self, deviceId, locationId, lyric_api, local_time=False):
+    def __init__(self, deviceId, location, lyric_api, local_time=False):
         self._deviceId = deviceId
-        self._locationId = locationId
+        self._location = location
+        self._locationId = self._location.locationId
         self._lyric_api = lyric_api
         self._local_time = local_time
 
@@ -27,7 +28,7 @@ class lyricDevice(object):
         return '<%s: %s>' % (self.__class__.__name__, self._repr_name)
 
     def _set(self, endpoint, data, **params):
-        params['locationId'] = self._locationId
+        params['locationId'] = self._location.locationId
         print(self._lyric_api._post(endpoint, data, **params))
         self._lyric_api._bust_cache_all()
 
@@ -37,8 +38,8 @@ class lyricDevice(object):
 
     @property
     def name(self):
-        if 'name' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['name']
+        if 'name' in self._lyric_api._device(self._location.locationId, self._deviceId):
+            return self._lyric_api._device(self._location.locationId, self._deviceId)['name']
         else:
             return self.userDefinedDeviceName
 
@@ -48,116 +49,21 @@ class lyricDevice(object):
 
     @property
     def deviceClass(self):
-        return self._lyric_api._device(self._locationId, self._deviceId)['deviceClass']
+        return self._lyric_api._device(self._location.locationId, self._deviceId)['deviceClass']
 
     @property
     def deviceType(self):
-        return self._lyric_api._device(self._locationId, self._deviceId)['deviceType']
+        return self._lyric_api._device(self._location.locationId, self._deviceId)['deviceType']
 
     @property
     def deviceID(self):
-        return self._lyric_api._device(self._locationId, self._deviceId)['deviceID']
+        return self._lyric_api._device(self._location.locationId, self._deviceId)['deviceID']
 
     @property
     def userDefinedDeviceName(self):
-        return self._lyric_api._device(self._locationId, self._deviceId)['userDefinedDeviceName']
+        return self._lyric_api._device(self._location.locationId, self._deviceId)['userDefinedDeviceName']
 
 class Location(object):
-    # locationID    Integer    Unique LocationID for a user's location.
-    # name    String    User-defined name of location
-    # streetAddress    String    User-defined street address of location
-    # city    String    User-defined city of location
-    # state    String    User-defined US State
-    # country    String    Country of location
-    # zipcode    Integer    User-defined Zip Code of location
-
-    # device.deviceClass    String    Class of Device, currently "Thermostat" or "LeakDetector"
-    # device.deviceType    String    Type of device, currently "Thermostat" or "Water Leak Detector"
-    # device.deviceID    String    Unique deviceID
-    # device.userDefinedDeviceName    String    User-defined device name
-    # device.name    String    Name
-    # device.units    String    Measurement units for temperature readings. Celcius or Fahrenheit
-    # device.indoorTemperature    Decimal    Current indoor temperature reading. Measured in whole numbers for F and half-degree increments for C.
-    # device.outdoorTemperature    Decimal    Current outdoor temperature reading. Measured in whole numbers for F and half-degree increments for C.
-    # device.allowedModes    Array    Currently allowed mode settings for the Thermostat
-    # device.deadband    Decimal    Required distance between heat and cool setpoints in AutoChangeover mode.
-    # device.hasDualSetpointStatus    Boolean    Indicates if the thermostat maintains seperate heat and cool setpoints
-    # device.minHeatSetpoint    Decimal    Minimum allowed heat setpoint
-    # device.maxHeatSetpoint    Decimal    Maximum allowed heat setpoint
-    # device.minCoolSetpoint    Decimal    Minimum allowed cool setpoint
-    # device.maxCoolSetpoint    Decimal    Maximum allowed cool setpoint
-    # device.changeableValues    Object    List of values/settings that can be changed on the thermostat. Used in POST requests.
-    # device.smartAway    Object    Settings that will take effect when nobody is home (via Geofencing). Null when reported means smart away is not available.
-    # device.indoorHumidity    Decimal    Indoor humidity rating as a percentage
-    # device.indoorHumidityStatus    String    Status of humidity sensor. Measured, NotAvailable, or SensorFault.
-    # device.isAlive    Boolean    Is the device alive
-    # device.isUpgrading    Boolean    Is the device currently running a firmware update true/false
-    # device.isProvisioned    Boolean    True if the device has completed provisioning and is communicating with Honeywell servers
-    # device.settings    Object    Secondary settings for the device
-    # device.settings.homeSetPoints    Object    Listing of current home mode setpoints
-    # device.settings.awaySetPoints    Object    Listing of current away mode settings
-    # device.settings.hardwareSettings    Object    List of current hardware settings (e.g., screen brightness, volume)
-    # device.settings.fan    Object    Shows current available modes and changeable settings for the fan
-    # device.settings.fan.allowedModes    Array    Currently available fan settings
-    # device.settings.fan.changeableValues    Object    Current fan setting, structure is used in POST change requests
-    # device.settings.temperatureMode    Object    Temperature reading and adjusment settings
-    # device.settings.temperatureMode.feelsLike    Boolean    Indicates if the 'Feels Like' feature is enabled
-    # device.settings.temperatureMode.air    Boolean    Indicates if Adaptive Intelligent Recovery is enabled
-    # device.settings.specialMode    Object    Special mode settings
-    # device.settings.specialMode.autoChangeoverActive    Boolean    Indicates if Auto mode is active. Not sent if the setting does not exist.
-    # device.settings.specialMode.emergencyHeatActive    Boolean    Indicates if Emergency Heat is active and device is capable. Not sent if not enabled on device.
-    # device.macID    String    The unique MACID of the device
-    # device.scheduleStatus    String    The running status of the schedule.
-    # device.allowedTimeIncrements    Integer    Allowed time increments, used when setting the schedule or temporary hold changes. In minutes.
-    # device.thermostatVersion    String    Current thermostat firmware version for Water Leak Detector
-    # device.waterPresent    Boolean    Is water currently detected
-    # device.currentSensorReadings    Object    Object showing current sensor readings
-    # device.currentSensorReadings.time    String    Timestamp of current sensor reading
-    # device.currentSensorReadings.temperature    Decimal    Temperature reading, always in celcius units.
-    # device.currentSensorReadings.humidity    Decimal    Current humidity reading as a percentage
-    # device.currentAlarms    Array    Array with individual objects for each current alarm. Contains type of alert and time created.
-    # device.lastCheckin    DateTime    Date and timestamp of the last time the device checked-in to Honeywell servers.
-    # device.lastdeviceettingUpdatedOn    DateTime    Date and time stamp of the last device setting change request
-    # device.batteryRemaining    Integer    Battery life remaining as a percentage
-    # device.isRegistered    Boolean    True/false if the device is registered
-    # device.hasDeviceCheckedIn    Boolean    True/false if the device has checked-in to Honeywell servers.
-    # device.isDeviceOffline    Boolean    True/false if the device is offline.
-    # device.firstFailedAttemptTime    DateTime    First failed communication attempt time.
-    # device.failedConnectionAttempts    Integer    Number of failed connection attempts
-    # device.wifiSignalStrength    Integer    WiFi signal strength in db
-    # device.isFirmwareUpdateRequired    Boolean    Does the device require a firmware update
-    # device.time    DateTime    Current device time.
-    # device.devicesettings    Object    Object containing device settings
-    # device.devicesettings.temp    Object    Temperature limit settings for alerts
-    # device.devicesettings.humidity    Object    Humidity limit settings for alerts
-    # device.devicesettings.userDefinedName    String    User defined device name
-    # device.devicesettings.buzzerMuted    Boolean    Buzzer muted true/false
-    # device.devicesettings.checkinPeriod    Integer    User set device check-in/reporting period for periodic readings
-    # device.devicesettings.currentSensorReadPeriod    Integer    Sensor reading period in minutes
-    # device.displayedOutdoorHumidity    Integer    Outdoor humidity value displayed in mobile app
-    # device.currentSchedulePeriod    Object    Current schedule period information
-    # device.currentSchedulePeriod.day    String    Currently running schedule period day
-    # device.currentSchedulePeriod.period    String    Currently running schedule period for the day. Home, Away, Wake or Sleep.
-    # device.scheduleCapabilities    Object    Information for schedule capabilities of the device.
-    # device.scheduleCapabilities.availableScheduleTypes    Array    List of available scheduling options for the device.
-    # device.scheduleCapabilities.schedulableFan    Boolean    Shows if the fan is capable of being scheduled.
-    # device.scheduleType    Object    Detail on currently selected schedule type.
-    # device.scheduleType.scheduleType    String    Currently selected schedule type. Would follow the values in device.scheduleCapabilities.availableScheduleTypes.
-    # device.scheduleType.scheduleSubType    String    Currently selected schedule subtype.
-
-    # user    Array    User information
-    # user.userID    Integer    Unique UserID
-    # user.username    String    User's username to login, usually an email address
-    # user.firstname    String    User's first name
-    # user.lastname    String    user last name
-    # user.created    Unix Timestamp    Date and time account was created in epoch format
-    # user.deleted    Unix Timestamp    Date and time account was deleted, negative number if not deleted
-    # user.activated    Boolean    True/false if user has been activated
-    # user.connectedHomeAccountExists    Boolean
-    # timeZone    String    Time Zone of the location
-    # daylightSavingTimeEnabled    Boolean    Is DST enabled for this location
-    # geoFences    Array    Shows configuration of user-defined geofences from our application
-    # geoFenceEnabled    Boolean    Is geofencing used by the user?
 
     def __init__(self, locationId, lyric_api, local_time=False):
         self._locationId = locationId
@@ -216,13 +122,35 @@ class Location(object):
         return self._lyric_api._location(self._locationId)['daylightSavingTimeEnabled']
 
     @property
-    def geoFences(self):
-        return self._lyric_api._location(self._locationId)['geoFences']
+    def geoFenceEnabled(self):
+        if 'geoFenceEnabled' in self._lyric_api._location(self._locationId):
+            return self._lyric_api._location(self._locationId)['geoFenceEnabled']
 
     @property
-    def geoFenceEnabled(self):
-        return self._lyric_api._location(self._locationId)['geoFenceEnabled']
+    def geoFences(self):
+        if 'geoFences' in self._lyric_api._location(self._locationId):
+            return self._lyric_api._location(self._locationId)['geoFences']
 
+    @property
+    def geoFence(self, index=0):
+        if self.geoFences and len(self.geoFences) >= index+1:
+            return self.geoFences[index]
+
+    @property
+    def geoOccupancy(self):
+        if 'geoOccupancy' in self.geoFence:
+            return self.geoFence['geoOccupancy']
+
+    @property
+    def withInFence(self):
+        if 'withinFence' in self.geoOccupancy:
+            return self.geoOccupancy['withinFence']
+
+    @property
+    def outsideFence(self):
+        if 'outsideFence' in self.geoOccupancy:
+            return self.geoOccupancy['outsideFence']
+        
     @property
     def _users(self):
         return self._lyric_api._users(self._locationId)
@@ -241,7 +169,7 @@ class Location(object):
 
     @property
     def users(self):
-        return [User(user['userID'], self._locationId, self._lyric_api, self._local_time)
+        return [User(user['userID'], self, self._lyric_api, self._local_time)
                 for user in self._users]
 
     @property
@@ -249,13 +177,13 @@ class Location(object):
         devices = []
         for device in self._devices:
             if device['deviceType'] == 'Thermostat':
-                devices.append(Thermostat(device['deviceID'], self._locationId,
+                devices.append(Thermostat(device['deviceID'], self,
                                     self._lyric_api, self._local_time))
             elif device['deviceType'] == 'Water Leak Detector':
-                devices.append(WaterLeakDetector(device['deviceID'], self._locationId,
+                devices.append(WaterLeakDetector(device['deviceID'], self,
                                     self._lyric_api, self._local_time))
             else:
-                devices.append(Device(device['deviceID'], self._locationId,
+                devices.append(Device(device['deviceID'], self,
                                     self._lyric_api, self._local_time))
         return devices
 
@@ -264,7 +192,7 @@ class Location(object):
         thermostats = []
         for device in self._devices:
             if device['deviceType'] == 'Thermostat':
-                thermostats.append(Thermostat(device['deviceID'], self._locationId,
+                thermostats.append(Thermostat(device['deviceID'], self,
                                     self._lyric_api, self._local_time))
         return thermostats
 
@@ -273,22 +201,14 @@ class Location(object):
         waterLeakDetectors = []
         for device in self._devices:
             if device['deviceType'] == 'Water Leak Detector':
-                waterLeakDetectors.append(WaterLeakDetector(device['deviceID'], self._locationId,
+                waterLeakDetectors.append(WaterLeakDetector(device['deviceID'], self,
                                     self._lyric_api, self._local_time))
         return waterLeakDetectors
 
 class User(object):
-    # User information
-    # user.userID    Integer    Unique UserID
-    # user.username    String    User's username to login, usually an email address
-    # user.firstname    String    User's first name
-    # user.lastname    String    user last name
-    # user.created    Unix Timestamp    Date and time account was created in epoch format
-    # user.deleted    Unix Timestamp    Date and time account was deleted, negative number if not deleted
-    # user.activated    Boolean    True/false if user has been activated
-    # user.connectedHomeAccountExists    Boolean
-    def __init__(self, userId, locationId, lyric_api, local_time=False):
-        self._locationId = locationId
+    def __init__(self, userId, location, lyric_api, local_time=False):
+        self._location = location
+        self._locationId = self._location.locationId
         self._userId = userId
         self._lyric_api = lyric_api
         self._local_time = local_time
@@ -310,11 +230,11 @@ class User(object):
 
     @property
     def userID(self):
-        return self._lyric_api._user(self._locationId, self._userId)['userID']
+        return self._lyric_api._user(self._location.locationId, self._userId)['userID']
 
     @property
     def username(self):
-        return self._lyric_api._user(self._locationId, self._userId)['username']
+        return self._lyric_api._user(self._location.locationId, self._userId)['username']
 
     @property
     def firstname(self):
@@ -349,69 +269,6 @@ class Device(lyricDevice):
         return self._lyric_api._device(self._locationId, self._deviceId)
 
 class Thermostat(lyricDevice):
-    # deviceClass    String    Class of Device, currently "Thermostat" or "LeakDetector"
-    # deviceType    String    Type of device, currently "Thermostat" or "Water Leak Detector"
-    # deviceID    String    Unique deviceID
-    # userDefinedDeviceName    String    User-defined device name
-    # name    String    Name
-    # units    String    Measurement units for temperature readings. Celcius or Fahrenheit
-    # indoorTemperature    Decimal    Current indoor temperature reading. Measured in whole numbers for F and half-degree increments for C.
-    # outdoorTemperature    Decimal    Current outdoor temperature reading. Measured in whole numbers for F and half-degree increments for C.
-    # allowedModes    Array    Currently allowed mode settings for the Thermostat
-    # deadband    Decimal    Required distance between heat and cool setpoints in AutoChangeover mode.
-    # hasDualSetpointStatus    Boolean    Indicates if the thermostat maintains seperate heat and cool setpoints
-    # minHeatSetpoint    Decimal    Minimum allowed heat setpoint
-    # maxHeatSetpoint    Decimal    Maximum allowed heat setpoint
-    # minCoolSetpoint    Decimal    Minimum allowed cool setpoint
-    # maxCoolSetpoint    Decimal    Maximum allowed cool setpoint
-    # changeableValues    Object    List of values/settings that can be changed on the thermostat. Used in POST requests.
-    # changeableValues.mode    String    Current running mode. Will match values in allowedModes.
-    # changeableValues.heatSetpoint    Integer    Current heat setpoint.
-    # changeableValues.coolSetpoint    Integer    Current cool setpoint.
-    # changeableValues.thermostatSetpointStatus    String    Current status of setpoint. NoHold means running schedule. TemporaryHold means holding current temp until nextPeriodTime. PermanentHold means holding current setpoint until next end-user action.
-    # changeableValues.nextPeriodTime    String    Signifies time of next schedule change, or time when any temporary hold expires. 00:00:00-23:45:00
-    # changeableValues.endHeatSetpoint    Integer
-    # changeableValues.endCoolSetpoint    Integer
-    # changeableValues.heatCoolMode    String    Signifies current running mode, usually used to tell last running state when Auto mode is enabled and active.
-    # operationStatus    Object    Details around operation status of the equipment.
-    # operationStatus.mode    String    Current running (relay status) of the equipment.
-    # operationStatus.fanRequest    Boolean    Current running (relay status) of the fan.
-    # operationStatus.circulationFanRequest    Boolean    Current running (relay status) of the fan circulate mode.
-    # smartAway    Object    Settings that will take effect when nobody is home (via Geofencing). Null when reported means smart away is not available.
-    # indoorHumidity    Decimal    Indoor humidity rating as a percentage
-    # indoorHumidityStatus    String    Status of humidity sensor. Measured, NotAvailable, or SensorFault.
-    # isAlive    Boolean    Is the device alive
-    # isUpgrading    Boolean    Is the device currently running a firmware update true/false
-    # isProvisioned    Boolean    True if the device has completed provisioning and is communicating with Honeywell servers
-    # settings    Object    Secondary settings for the device
-    # settings.homeSetPoints    Object    Listing of current home mode setpoints
-    # settings.awaySetPoints    Object    Listing of current away mode settings
-    # settings.hardwareSettings    Object    List of current hardware settings (e.g., screen brightness, volume)
-    # settings.fan    Object    Shows current available modes and changeable settings for the fan
-    # settings.fan.allowedModes    Array    Currently available fan settings
-    # settings.fan.changeableValues    Object    Current fan setting, structure is used in POST change requests
-    # settings.temperatureMode    Object    Temperature reading and adjusment settings
-    # settings.temperatureMode.feelsLike    Boolean    Indicates if the 'Feels Like' feature is enabled
-    # settings.temperatureMode.air    Boolean    Indicates if Adaptive Intelligent Recovery is enabled
-    # settings.specialMode    Object    Special mode settings
-    # settings.specialMode.autoChangeoverActive    Boolean    Indicates if Auto mode is active. Not sent if the setting does not exist.
-    # settings.specialMode.emergencyHeatActive    Boolean    Indicates if Emergency Heat is active and device is capable. Not sent if not enabled on
-    # macID    String    The unique MACID of the device
-    # scheduleStatus    String    The running status of the schedule.
-    # allowedTimeIncrements    Integer    Allowed time increments, used when setting the schedule or temporary hold changes. In minutes.
-    # thermostatVersion    String    Current thermostat firmware version for Water Leak Detector
-    # isRegistered    Boolean    True/false if the device is registered
-    # devicesettings    Object    Object containing device settings
-    # displayedOutdoorHumidity    Integer    Outdoor humidity value displayed in mobile app
-    # currentSchedulePeriod    Object    Current schedule period information
-    # currentSchedulePeriod.day    String    Currently running schedule period day
-    # currentSchedulePeriod.period    String    Currently running schedule period for the day. Home, Away, Wake or Sleep.
-    # scheduleCapabilities    Object    Information for schedule capabilities of the
-    # scheduleCapabilities.availableScheduleTypes    Array    List of available scheduling options for the
-    # scheduleCapabilities.schedulableFan    Boolean    Shows if the fan is capable of being scheduled.
-    # scheduleType    Object    Detail on currently selected schedule type.
-    # scheduleType.scheduleType    String    Currently selected schedule type. Would follow the values in scheduleCapabilities.availableScheduleTypes.
-    # scheduleType.scheduleSubType    String    Currently selected schedule subtype.
 
     def updateThermostat(self, mode=None, heatSetpoint=None, coolSetpoint=None, AutoChangeover=None, thermostatSetpointStatus=None, nextPeriodTime=None):
         if mode is None:
@@ -443,12 +300,12 @@ class Thermostat(lyricDevice):
             data['nextPeriodTime'] = nextPeriodTime
 
         self._set('devices/thermostats/' + self._deviceId, data=data)
-
+        
     @property
     def away(self):
         if self.scheduleType == 'Geofence':
-            if self._lyric_api._location(self._locationId)['geoFenceEnabled']:
-                return (self._lyric_api._location(self._locationId)['geoFences'][0]['geoOccupancy']['withinFence'] == 0)
+            if self._location.geoFenceEnabled:
+                return (self._location.withInFence == 0)
         elif self.scheduleType == 'Timed' and self.scheduleSubType == 'NA': # North America
             return (self.currentSchedulePeriod['period'] == 'Away')
         elif self.scheduleType == 'Timed' and self.scheduleSubType == 'EMEA': # Europe, Middle-East, Africa
@@ -461,11 +318,12 @@ class Thermostat(lyricDevice):
 
     @property
     def where(self):
-        return self._lyric_api._location(self._locationId)['name']
+        return self._location.name
 
     @property
     def units(self):
-        return self._lyric_api._device(self._locationId, self._deviceId)['units']
+        if 'units' in self._lyric_api._device(self._locationId, self._deviceId):
+            return self._lyric_api._device(self._locationId, self._deviceId)['units']
 
     @property
     def indoorTemperature(self):
@@ -506,7 +364,8 @@ class Thermostat(lyricDevice):
 
     @property
     def operationMode(self):
-        return self.changeableValues['mode']
+        if 'mode' in self.changeableValues:
+            return self.changeableValues['mode']
 
     @operationMode.setter
     def operationMode(self, mode):
@@ -648,7 +507,7 @@ class Thermostat(lyricDevice):
 
     @property
     def fanMode(self):
-        if 'settings' in self._lyric_api._device(self._locationId, self._deviceId) and 'fan' in self.settings:
+        if self.settings and 'fan' in self.settings:
             return self.settings["fan"]["changeableValues"]["mode"]
 
     @property
@@ -708,76 +567,8 @@ class Thermostat(lyricDevice):
         if 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId) and 'scheduleSubType' in self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']:
             return self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']['scheduleSubType']
 
-    # #changeableValues    Object    List of values/settings that can be changed on the thermostat. Used in POST requests.
-    # changeableValues.mode    String    Current running mode. Will match values in allowedModes.
-    # changeableValues.heatSetpoint    Integer    Current heat setpoint.
-    # changeableValues.coolSetpoint    Integer    Current cool setpoint.
-    # changeableValues.thermostatSetpointStatus    String    Current status of setpoint. NoHold means running schedule. TemporaryHold means holding current temp until nextPeriodTime. PermanentHold means holding current setpoint until next end-user action.
-    # changeableValues.nextPeriodTime    String    Signifies time of next schedule change, or time when any temporary hold expires. 00:00:00-23:45:00
-    # changeableValues.endHeatSetpoint    Integer
-    # changeableValues.endCoolSetpoint    Integer
-    # changeableValues.heatCoolMode    String    Signifies current running mode, usually used to tell last running state when Auto mode is enabled and active.
-    #
-    # #operationStatus    Object    Details around operation status of the equipment.
-    # operationStatus.mode    String    Current running (relay status) of the equipment.
-    # operationStatus.fanRequest    Boolean    Current running (relay status) of the fan.
-    # operationStatus.circulationFanRequest    Boolean    Current running (relay status) of the fan circulate mode.
-    #
-    # #settings    Object    Secondary settings for the device
-    # settings.homeSetPoints    Object    Listing of current home mode setpoints
-    # settings.awaySetPoints    Object    Listing of current away mode settings
-    # settings.hardwareSettings    Object    List of current hardware settings (e.g., screen brightness, volume)
-    # settings.fan    Object    Shows current available modes and changeable settings for the fan
-    # settings.fan.allowedModes    Array    Currently available fan settings
-    # settings.fan.changeableValues    Object    Current fan setting, structure is used in POST change requests
-    # settings.temperatureMode    Object    Temperature reading and adjusment settings
-    # settings.temperatureMode.feelsLike    Boolean    Indicates if the 'Feels Like' feature is enabled
-    # settings.temperatureMode.air    Boolean    Indicates if Adaptive Intelligent Recovery is enabled
-    # settings.specialMode    Object    Special mode settings
-    # settings.specialMode.autoChangeoverActive    Boolean    Indicates if Auto mode is active. Not sent if the setting does not exist.
-    # settings.specialMode.emergencyHeatActive    Boolean    Indicates if Emergency Heat is active and device is capable. Not sent if not enabled on
-    #
-    # #currentSchedulePeriod    Object    Current schedule period information
-    # currentSchedulePeriod.day    String    Currently running schedule period day
-    # currentSchedulePeriod.period    String    Currently running schedule period for the day. Home, Away, Wake or Sleep.
-    #
-    # #scheduleCapabilities    Object    Information for schedule capabilities of the
-    # scheduleCapabilities.availableScheduleTypes    Array    List of available scheduling options for the
-    # scheduleCapabilities.schedulableFan    Boolean    Shows if the fan is capable of being scheduled.
-    #
-    # #scheduleType    Object    Detail on currently selected schedule type.
-    # scheduleType.scheduleType    String    Currently selected schedule type. Would follow the values in scheduleCapabilities.availableScheduleTypes.
-    # scheduleType.scheduleSubType    String    Currently selected schedule subtype.
 
 class WaterLeakDetector(lyricDevice):
-
-    # deviceClass    String    Class of Device, currently "Thermostat" or "LeakDetector"
-    # deviceType    String    Type of device, currently "Thermostat" or "Water Leak Detector"
-    # deviceID    String    Unique deviceID
-    # waterPresent    Boolean    Is water currently detected
-    # currentSensorReadings    Object    Object showing current sensor readings
-    # currentSensorReadings.time    String    Timestamp of current sensor reading
-    # currentSensorReadings.temperature    Decimal    Temperature reading, always in celcius units.
-    # currentSensorReadings.humidity    Decimal    Current humidity reading as a percentage
-    # currentAlarms    Array    Array with individual objects for each current alarm. Contains type of alert and time created.
-    # lastCheckin    DateTime    Date and timestamp of the last time the device checked-in to Honeywell servers.
-    # lastDeviceSettingUpdatedOn    DateTime    Date and time stamp of the last device setting change request
-    # batteryRemaining    Integer    Battery life remaining as a percentage
-    # isRegistered    Boolean    True/false if the device is registered
-    # hasDeviceCheckedIn    Boolean    True/false if the device has checked-in to Honeywell servers.
-    # isDeviceOffline    Boolean    True/false if the device is offline.
-    # firstFailedAttemptTime    DateTime
-    # failedConnectionAttempts    Integer
-    # wifiSignalStrength    Integer    WiFi signal strength in db
-    # isFirmwareUpdateRequired    Boolean    Does the device require a firmware update
-    # time    DateTime
-    # deviceSettings    Object    Object containing device settings
-    # deviceSettings.temp    Object    Temperature limit settings for alerts
-    # deviceSettings.humidity    Object    Humidity limit settings for alerts
-    # deviceSettings.userDefinedName    String    User defined device name
-    # deviceSettings.buzzerMuted    Boolean    Buzzer muted true/false
-    # deviceSettings.checkinPeriod    Integer    User set device check-in/reporting period for periodic readings
-    # deviceSettings.currentSensorReadPeriod    Integer    Sensor reading period in minutes
 
     @property
     def waterPresent(self):
@@ -854,18 +645,6 @@ class WaterLeakDetector(lyricDevice):
         if 'deviceSettings' in self._lyric_api._device(self._locationId, self._deviceId):
             return self._lyric_api._device(self._locationId, self._deviceId)['deviceSettings']
 
-    # #currentSensorReadings    Object    Object showing current sensor readings
-    # currentSensorReadings.time    String    Timestamp of current sensor reading
-    # currentSensorReadings.temperature    Decimal    Temperature reading, always in celcius units.
-    # currentSensorReadings.humidity    Decimal    Current humidity reading as a percentage
-
-    # #deviceSettings    Object    Object containing device settings
-    # deviceSettings.temp    Object    Temperature limit settings for alerts
-    # deviceSettings.humidity    Object    Humidity limit settings for alerts
-    # deviceSettings.userDefinedName    String    User defined device name
-    # deviceSettings.buzzerMuted    Boolean    Buzzer muted true/false
-    # deviceSettings.checkinPeriod    Integer    User set device check-in/reporting period for periodic readings
-    # deviceSettings.currentSensorReadPeriod    Integer    Sensor reading period in minutes
 
 class Lyric(object):
     def __init__(self, client_id, client_secret, cache_ttl=270,
@@ -954,27 +733,6 @@ class Lyric(object):
             self._lyricApi = OAuth2Session(self._client_id, token=self._token,
                                            auto_refresh_url=REFRESH_URL,
                                            token_updater=self._token_saver)
-#         else:
-#             self._lyricApi = OAuth2Session(self._client_id,
-#                                            redirect_uri=self._redirect_uri,
-#                                            auto_refresh_url=REFRESH_URL,
-#                                            token_updater=self._token_saver)
-#
-#             authorization_url, state = self._lyricApi.authorization_url(
-#                     AUTHORIZATION_BASE_URL, app=self._app_name)
-#
-#             print ('Please go to %s and authorize access.' % authorization_url)
-#             authorization_response = input('Enter the full response url')
-#
-#             auth = requests.auth.HTTPBasicAuth(self._client_id,
-#                                                self._client_secret)
-#             headers = {'Accept': 'application/json'}
-#
-#             token = self._lyricApi.fetch_token(
-#                     TOKEN_URL, headers=headers, auth=auth,
-#                     authorization_response=authorization_response)
-#
-#             self._token_saver(token)
 
     def _get(self, endpoint, **params):
         params['apikey'] = self._client_id
