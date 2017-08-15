@@ -693,9 +693,9 @@ class Lyric(object):
     @property
     def getauthorize_url(self):
         self._lyricApi = OAuth2Session(self._client_id,
-                                        redirect_uri=self._redirect_uri,
-                                        auto_refresh_url=REFRESH_URL,
-                                        token_updater=self._token_saver)
+                                       redirect_uri=self._redirect_uri,
+                                       auto_refresh_url=REFRESH_URL,
+                                       token_updater=self._token_saver)
 
         authorization_url, state = self._lyricApi.authorization_url(
                 AUTHORIZATION_BASE_URL, app=self._app_name)
@@ -729,15 +729,9 @@ class Lyric(object):
                     self._token = json.load(f)
 
         if self._token is not None:
-            try:
-                self._lyricApi = OAuth2Session(self._client_id, token=self._token,
-                                               auto_refresh_url=REFRESH_URL,
-                                               token_updater=self._token_saver)
-            except TokenExpiredError as e:
-                _LOGGER.warning("Lyric API token expired")
-                token = self._lyricApi.refresh_token(REFRESH_URL)
-                self._token_saver(token)
-                self._lyricAuth()
+            self._lyricApi = OAuth2Session(self._client_id, token=self._token,
+                                           auto_refresh_url=REFRESH_URL,
+                                           token_updater=self._token_saver)
 
     def _get(self, endpoint, **params):
         params['apikey'] = self._client_id
