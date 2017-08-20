@@ -662,10 +662,6 @@ class Lyric(object):
         self._cache = {}
         self._local_time = local_time
         self._user_agent = user_agent
-        self._extra = {
-                        'client_id': client_id,
-                        'client_secret': client_secret,
-        }
 
         if token is None and token_cache_file is None and redirect_uri is None:
             print('You need to supply a token or a cached token file,'
@@ -737,8 +733,7 @@ class Lyric(object):
         if self._token is not None:
             self._lyricApi = OAuth2Session(self._client_id, token=self._token,
                                            auto_refresh_url=REFRESH_URL,
-                                           token_updater=self._token_saver,
-                                           auto_refresh_kwargs=self._extra)
+                                           token_updater=self._token_saver)
 
     def _lyricReauth(self):
         if (self._token_cache_file is not None and
@@ -753,8 +748,7 @@ class Lyric(object):
             
             self._lyricApi = OAuth2Session(self._client_id, token=self._token,
                                            auto_refresh_url=REFRESH_URL,
-                                           token_updater=self._token_saver,
-                                           auto_refresh_kwargs=self._extra)
+                                           token_updater=self._token_saver)
 
             token = self._lyricApi.refresh_token(REFRESH_URL,
                     refresh_token=self._token["refresh_token"], headers=headers,
