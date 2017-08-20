@@ -662,6 +662,10 @@ class Lyric(object):
         self._cache = {}
         self._local_time = local_time
         self._user_agent = user_agent
+        self._extra = {
+                        'client_id': client_id,
+                        'client_secret': client_secret,
+        }
 
         if token is None and token_cache_file is None and redirect_uri is None:
             print('You need to supply a token or a cached token file,'
@@ -749,13 +753,13 @@ class Lyric(object):
             self._token_saver(e.token)
         except TokenExpiredError as e:
             _LOGGER.warning("Token Expired Lyric API: %s" % e)
-            token = self._lyricApi.refresh_token(REFRESH_URL) #, **extra
+            token = self._lyricApi.refresh_token(REFRESH_URL, **self._extra)
             self._token_saver(token)
             self._get(endpoint, params)
         except requests.HTTPError as e:
             _LOGGER.error("HTTP Error Lyric API: %s" % e)
             if e.response.status_code == 401:
-                token = self._lyricApi.refresh_token(REFRESH_URL) #, **extra
+                token = self._lyricApi.refresh_token(REFRESH_URL, **self._extra)
                 self._token_saver(token)
         except requests.exceptions.RequestException as e:
             # print("Error Lyric API: %s with data: %s" % (e, data))
@@ -775,9 +779,14 @@ class Lyric(object):
             self._token_saver(e.token)
         except TokenExpiredError as e:
             _LOGGER.warning("Token Expired Lyric API: %s" % e)
-            token = self._lyricApi.refresh_token(REFRESH_URL, **extra)
+            token = self._lyricApi.refresh_token(REFRESH_URL, **self._extra)
             self._token_saver(token)
             self._post(endpoint, data, params)
+        except requests.HTTPError as e:
+            _LOGGER.error("HTTP Error Lyric API: %s" % e)
+            if e.response.status_code == 401:
+                token = self._lyricApi.refresh_token(REFRESH_URL, **self._extra)
+                self._token_saver(token)
         except requests.exceptions.RequestException as e:
             # print("Error Lyric API: %s with data: %s" % (e, data))
             _LOGGER.error("Error Lyric API: %s with data: %s" % (e, data))
