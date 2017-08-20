@@ -753,8 +753,8 @@ class Lyric(object):
                                            token_updater=self._token_saver,
                                            auto_refresh_kwargs=self._extra)
 
-           token = self._lyricApi.refresh_token(REFRESH_URL, **self._extra)
-           self._token_saver(token)
+            token = self._lyricApi.refresh_token(REFRESH_URL, **self._extra)
+            self._token_saver(token)
 
     def _get(self, endpoint, **params):
         params['apikey'] = self._client_id
