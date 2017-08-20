@@ -748,12 +748,17 @@ class Lyric(object):
                     self._token = json.load(f)
 
         if self._token is not None:
+            auth = requests.auth.HTTPBasicAuth(self._client_id, self._client_secret)
+            headers = {'Accept': 'application/json'}
+            
             self._lyricApi = OAuth2Session(self._client_id, token=self._token,
                                            auto_refresh_url=REFRESH_URL,
                                            token_updater=self._token_saver,
                                            auto_refresh_kwargs=self._extra)
 
-            token = self._lyricApi.refresh_token(REFRESH_URL, refresh_token=self._token["refresh_token"])
+            token = self._lyricApi.refresh_token(REFRESH_URL,
+                    refresh_token=self._token["refresh_token"], headers=headers,
+                    auth=auth)
             self._token_saver(token)
 
     def _get(self, endpoint, **params):
