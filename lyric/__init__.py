@@ -699,6 +699,7 @@ class Lyric(object):
 
         authorization_url, state = self._lyricApi.authorization_url(
                 AUTHORIZATION_BASE_URL, app=self._app_name)
+
         return authorization_url
 
     def authorization_response(self, authorization_response):
@@ -785,8 +786,10 @@ class Lyric(object):
         now = time.time()
 
         if not value or now - last_update > self._cache_ttl:
-            value = self._get('locations')
-            self._cache[cache_key] = (value, now)
+            new_value = self._get('locations')
+            if new_value:
+                self._cache[cache_key] = (new_value, now)
+                return new_value
 
         return value
 
@@ -811,11 +814,15 @@ class Lyric(object):
             now = time.time()
 
             if not value or now - last_update > self._cache_ttl:
-                value = self._get('devices', locationId=locationId)
-                self._cache[cache_key] = (value, now)
+                new_value = self._get('devices', locationId=locationId)
+                if new_value:
+                    self._cache[cache_key] = (new_value, now)
+                    return new_value
         else:
-            if 'devices' in self._location(locationId):
-                value = self._location(locationId)['devices']
+            if self._locations:
+                return self._location(locationId)['devices']
+            else:
+                return self._devices(locationId, forceGet=True)
 
         return value
 
@@ -837,5 +844,8 @@ class Lyric(object):
 
     @property
     def locations(self):
-        return [Location(location['locationID'], self, self._local_time)
-                for location in self._locations]
+        if (self._locations):
+            return [Location(location['locationID'], self, self._local_time)
+                    for location in self._locations]
+        else:
+            return None
