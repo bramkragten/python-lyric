@@ -737,7 +737,24 @@ class Lyric(object):
         if self._token is not None:
             self._lyricApi = OAuth2Session(self._client_id, token=self._token,
                                            auto_refresh_url=REFRESH_URL,
-                                           token_updater=self._token_saver)
+                                           token_updater=self._token_saver,
+                                           auto_refresh_kwargs=self._extra)
+
+    def _lyricReauth(self):
+        if (self._token_cache_file is not None and
+                    self._token is None and
+                    os.path.exists(self._token_cache_file)):
+                with open(self._token_cache_file, 'r') as f:
+                    self._token = json.load(f)
+
+        if self._token is not None:
+            self._lyricApi = OAuth2Session(self._client_id, token=self._token,
+                                           auto_refresh_url=REFRESH_URL,
+                                           token_updater=self._token_saver,
+                                           auto_refresh_kwargs=self._extra)
+
+           token = self._lyricApi.refresh_token(REFRESH_URL, **self._extra)
+           self._token_saver(token)
 
     def _get(self, endpoint, **params):
         params['apikey'] = self._client_id
@@ -753,14 +770,12 @@ class Lyric(object):
             self._token_saver(e.token)
         except TokenExpiredError as e:
             _LOGGER.warning("Token Expired Lyric API: %s" % e)
-            token = self._lyricApi.refresh_token(REFRESH_URL, **self._extra)
-            self._token_saver(token)
+            self._lyricReauth()
             self._get(endpoint, params)
         except requests.HTTPError as e:
             _LOGGER.error("HTTP Error Lyric API: %s" % e)
             if e.response.status_code == 401:
-                token = self._lyricApi.refresh_token(REFRESH_URL, **self._extra)
-                self._token_saver(token)
+                self._lyricReauth()
         except requests.exceptions.RequestException as e:
             # print("Error Lyric API: %s with data: %s" % (e, data))
             _LOGGER.error("Error Lyric API: %s" % e)
@@ -779,14 +794,12 @@ class Lyric(object):
             self._token_saver(e.token)
         except TokenExpiredError as e:
             _LOGGER.warning("Token Expired Lyric API: %s" % e)
-            token = self._lyricApi.refresh_token(REFRESH_URL, **self._extra)
-            self._token_saver(token)
+            self._lyricReauth()
             self._post(endpoint, data, params)
         except requests.HTTPError as e:
             _LOGGER.error("HTTP Error Lyric API: %s" % e)
             if e.response.status_code == 401:
-                token = self._lyricApi.refresh_token(REFRESH_URL, **self._extra)
-                self._token_saver(token)
+                self._lyricReauth()
         except requests.exceptions.RequestException as e:
             # print("Error Lyric API: %s with data: %s" % (e, data))
             _LOGGER.error("Error Lyric API: %s with data: %s" % (e, data))
