@@ -6,7 +6,8 @@ import logging
 import requests
 #import json
 from requests.compat import json
-from requests_oauthlib import OAuth2Session
+from requests_oauthlib import OAuth2Session, TokenUpdated
+from oauthlib.oauth2 import TokenExpiredError
 import urllib.parse
 
 _LOGGER = logging.getLogger(__name__)
@@ -743,6 +744,19 @@ class Lyric(object):
                                          client_secret=self._client_secret)
             response.raise_for_status()
             return response.json()
+        except TokenUpdated as e:
+            _LOGGER.debug("Token Updated Lyric API: %s" % e)
+            self._token_saver(e.token)
+        except TokenExpiredError as e:
+            _LOGGER.warning("Token Expired Lyric API: %s" % e)
+            token = self._lyricApi.refresh_token(REFRESH_URL) #, **extra
+            self._token_saver(token)
+            self._get(endpoint, params)
+        except requests.HTTPError as e:
+            _LOGGER.error("HTTP Error Lyric API: %s" % e)
+            if e.response.status_code == 401:
+                token = self._lyricApi.refresh_token(REFRESH_URL) #, **extra
+                self._token_saver(token)
         except requests.exceptions.RequestException as e:
             # print("Error Lyric API: %s with data: %s" % (e, data))
             _LOGGER.error("Error Lyric API: %s" % e)
@@ -756,6 +770,14 @@ class Lyric(object):
                                            client_secret=self._client_secret)
             response.raise_for_status()
             return response.status_code
+        except TokenUpdated as e:
+            _LOGGER.debug("Token Updated Lyric API: %s" % e)
+            self._token_saver(e.token)
+        except TokenExpiredError as e:
+            _LOGGER.warning("Token Expired Lyric API: %s" % e)
+            token = self._lyricApi.refresh_token(REFRESH_URL, **extra)
+            self._token_saver(token)
+            self._post(endpoint, data, params)
         except requests.exceptions.RequestException as e:
             # print("Error Lyric API: %s with data: %s" % (e, data))
             _LOGGER.error("Error Lyric API: %s with data: %s" % (e, data))
@@ -790,6 +812,8 @@ class Lyric(object):
             if new_value:
                 self._cache[cache_key] = (new_value, now)
                 return new_value
+            else:
+                self._cache[cache_key] = (value, last_update + 5) # try again in 5 seconds
 
         return value
 
@@ -822,7 +846,7 @@ class Lyric(object):
             if self._locations:
                 return self._location(locationId)['devices']
             else:
-                return self._devices(locationId, forceGet=True)
+                return None
 
         return value
 
