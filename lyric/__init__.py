@@ -853,7 +853,7 @@ class Lyric(object):
                     self._cache[cache_key] = (new_value, now)
                     return new_value
         else:
-            if self._locations and devices in self._locations:
+            if self._locations and devices in self._location(locationId):
                 return self._location(locationId)['devices']
             else:
                 return None
