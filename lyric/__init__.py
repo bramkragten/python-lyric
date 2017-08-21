@@ -4,7 +4,6 @@ import os
 import time
 import logging
 import requests
-#import json
 from requests.compat import json
 from requests_oauthlib import OAuth2Session
 import urllib.parse
@@ -15,6 +14,7 @@ BASE_URL = 'https://api.honeywell.com/v2/'
 AUTHORIZATION_BASE_URL = 'https://api.honeywell.com/oauth2/authorize'
 TOKEN_URL = 'https://api.honeywell.com/oauth2/token'
 REFRESH_URL = TOKEN_URL
+
 
 class lyricDevice(object):
     def __init__(self, deviceId, location, lyric_api, local_time=False):
@@ -37,9 +37,13 @@ class lyricDevice(object):
         return self._deviceId
 
     @property
+    def device(self):
+        return self._lyric_api._device(self._locationId, self._deviceId)
+
+    @property
     def name(self):
-        if 'name' in self._lyric_api._device(self._location.locationId, self._deviceId):
-            return self._lyric_api._device(self._location.locationId, self._deviceId)['name']
+        if 'name' in self.device:
+            return self.device.get('name')
         else:
             return self.userDefinedDeviceName
 
@@ -49,19 +53,20 @@ class lyricDevice(object):
 
     @property
     def deviceClass(self):
-        return self._lyric_api._device(self._location.locationId, self._deviceId)['deviceClass']
+        return self.device.get('deviceClass')
 
     @property
     def deviceType(self):
-        return self._lyric_api._device(self._location.locationId, self._deviceId)['deviceType']
+        return self.device.get('deviceType')
 
     @property
     def deviceID(self):
-        return self._lyric_api._device(self._location.locationId, self._deviceId)['deviceID']
+        return self.device.get('deviceID')
 
     @property
     def userDefinedDeviceName(self):
-        return self._lyric_api._device(self._location.locationId, self._deviceId)['userDefinedDeviceName']
+        return self.device.get('userDefinedDeviceName')
+
 
 class Location(object):
 
@@ -82,12 +87,16 @@ class Location(object):
         return self._locationId
 
     @property
+    def location(self):
+        return self._lyric_api._location(self._locationId)
+
+    @property
     def locationID(self):
-        return self._lyric_api._location(self._locationId)['locationID']
+        return self.location.get('locationID')
 
     @property
     def name(self):
-        return self._lyric_api._location(self._locationId)['name']
+        return self.location.get('name')
 
     @property
     def _repr_name(self):
@@ -95,41 +104,39 @@ class Location(object):
 
     @property
     def streetAddress(self):
-        return self._lyric_api._location(self._locationId)['streetAddress']
+        return self.location.get('streetAddress')
 
     @property
     def city(self):
-        return self._lyric_api._location(self._locationId)['city']
+        return self.location.get('city')
 
     @property
     def state(self):
-        return self._lyric_api._location(self._locationId)['state']
+        return self.location.get('state')
 
     @property
     def country(self):
-        return self._lyric_api._location(self._locationId)['country']
+        return self.location.get('country')
 
     @property
     def zipcode(self):
-        return self._lyric_api._location(self._locationId)['zipcode']
+        return self.location.get('zipcode')
 
     @property
     def timeZone(self):
-        return self._lyric_api._location(self._locationId)['timeZone']
+        return self.location.get('timeZone')
 
     @property
     def daylightSavingTimeEnabled(self):
-        return self._lyric_api._location(self._locationId)['daylightSavingTimeEnabled']
+        return self.location.get('daylightSavingTimeEnabled')
 
     @property
     def geoFenceEnabled(self):
-        if 'geoFenceEnabled' in self._lyric_api._location(self._locationId):
-            return self._lyric_api._location(self._locationId)['geoFenceEnabled']
+        return self.location.get('geoFenceEnabled')
 
     @property
     def geoFences(self):
-        if 'geoFences' in self._lyric_api._location(self._locationId):
-            return self._lyric_api._location(self._locationId)['geoFences']
+        return self.location.get('geoFences')
 
     @property
     def geoFence(self, index=0):
@@ -139,18 +146,18 @@ class Location(object):
     @property
     def geoOccupancy(self):
         if 'geoOccupancy' in self.geoFence:
-            return self.geoFence['geoOccupancy']
+            return self.geoFence.get('geoOccupancy')
 
     @property
     def withInFence(self):
         if 'withinFence' in self.geoOccupancy:
-            return self.geoOccupancy['withinFence']
+            return self.geoOccupancy.get('withinFence')
 
     @property
     def outsideFence(self):
         if 'outsideFence' in self.geoOccupancy:
-            return self.geoOccupancy['outsideFence']
-        
+            return self.geoOccupancy.get('outsideFence')
+
     @property
     def _users(self):
         return self._lyric_api._users(self._locationId)
@@ -165,11 +172,13 @@ class Location(object):
 
     @property
     def _waterLeakDetectors(self):
-        return self._lyric_api._devices_type('waterLeakDetectors', self._locationId)
+        return self._lyric_api._devices_type('waterLeakDetectors',
+                                             self._locationId)
 
     @property
     def users(self):
-        return [User(user['userID'], self, self._lyric_api, self._local_time)
+        return [User(user.get('userID'), self, self._lyric_api,
+                     self._local_time)
                 for user in self._users]
 
     @property
@@ -178,13 +187,14 @@ class Location(object):
         for device in self._devices:
             if device['deviceType'] == 'Thermostat':
                 devices.append(Thermostat(device['deviceID'], self,
-                                    self._lyric_api, self._local_time))
+                                          self._lyric_api, self._local_time))
             elif device['deviceType'] == 'Water Leak Detector':
-                devices.append(WaterLeakDetector(device['deviceID'], self,
-                                    self._lyric_api, self._local_time))
+                devices.append(WaterLeakDetector(device['deviceID'],
+                                                 self, self._lyric_api,
+                                                 self._local_time))
             else:
                 devices.append(Device(device['deviceID'], self,
-                                    self._lyric_api, self._local_time))
+                                      self._lyric_api, self._local_time))
         return devices
 
     @property
@@ -193,7 +203,8 @@ class Location(object):
         for device in self._devices:
             if device['deviceType'] == 'Thermostat':
                 thermostats.append(Thermostat(device['deviceID'], self,
-                                    self._lyric_api, self._local_time))
+                                              self._lyric_api,
+                                              self._local_time))
         return thermostats
 
     @property
@@ -201,9 +212,12 @@ class Location(object):
         waterLeakDetectors = []
         for device in self._devices:
             if device['deviceType'] == 'Water Leak Detector':
-                waterLeakDetectors.append(WaterLeakDetector(device['deviceID'], self,
-                                    self._lyric_api, self._local_time))
+                waterLeakDetectors.append(WaterLeakDetector(device['deviceID'],
+                                                            self,
+                                                            self._lyric_api,
+                                                            self._local_time))
         return waterLeakDetectors
+
 
 class User(object):
     def __init__(self, userId, location, lyric_api, local_time=False):
@@ -229,36 +243,41 @@ class User(object):
         return self.username
 
     @property
+    def user(self):
+        return self._lyric_api._user(self._locationId, self._userId)
+
+    @property
     def userID(self):
-        return self._lyric_api._user(self._location.locationId, self._userId)['userID']
+        return self.user.get('userID')
 
     @property
     def username(self):
-        return self._lyric_api._user(self._location.locationId, self._userId)['username']
+        return self.user.get('username')
 
     @property
     def firstname(self):
-        return self._lyric_api._user(self._locationId, self._userId)['firstname']
+        return self.user.get('firstname')
 
     @property
     def lastname(self):
-        return self._lyric_api._user(self._locationId, self._userId)['lastname']
+        return self.user.get('lastname')
 
     @property
     def created(self):
-        return self._lyric_api._user(self._locationId, self._userId)['created']
+        return self.user.get('created')
 
     @property
     def deleted(self):
-        return self._lyric_api._user(self._locationId, self._userId)['deleted']
+        return self.user.get('deleted')
 
     @property
     def activated(self):
-        return self._lyric_api._user(self._locationId, self._userId)['activated']
+        return self.user.get('activated')
 
     @property
     def connectedHomeAccountExists(self):
-        return self._lyric_api._user(self._locationId, self._userId)['connectedHomeAccountExists']
+        return self.user.get('connectedHomeAccountExists')
+
 
 class Device(lyricDevice):
     @property
@@ -266,11 +285,14 @@ class Device(lyricDevice):
         return True
 
     def properties(self):
-        return self._lyric_api._device(self._locationId, self._deviceId)
+        return self.device
+
 
 class Thermostat(lyricDevice):
 
-    def updateThermostat(self, mode=None, heatSetpoint=None, coolSetpoint=None, AutoChangeover=None, thermostatSetpointStatus=None, nextPeriodTime=None):
+    def updateThermostat(self, mode=None, heatSetpoint=None, coolSetpoint=None,
+                         AutoChangeover=None, thermostatSetpointStatus=None,
+                         nextPeriodTime=None):
         if mode is None:
             mode = self.operationMode
         if heatSetpoint is None:
@@ -284,7 +306,8 @@ class Thermostat(lyricDevice):
 
         if 'autoChangeoverActive' in self.changeableValues:
             if AutoChangeover is None:
-                AutoChangeover = self.changeableValues['autoChangeoverActive']
+                AutoChangeover = self.changeableValues.get(
+                    'autoChangeoverActive')
 
         data = {
             'mode': mode,
@@ -300,21 +323,22 @@ class Thermostat(lyricDevice):
             data['nextPeriodTime'] = nextPeriodTime
 
         self._set('devices/thermostats/' + self._deviceId, data=data)
-        
+
     @property
     def away(self):
         if self.scheduleType == 'Geofence':
             if self._location.geoFenceEnabled:
                 return (self._location.withInFence == 0)
-        elif self.scheduleType == 'Timed' and self.scheduleSubType == 'NA': # North America
-            return (self.currentSchedulePeriod['period'] == 'Away')
-        elif self.scheduleType == 'Timed' and self.scheduleSubType == 'EMEA': # Europe, Middle-East, Africa
-            return (self.currentSchedulePeriod['period'] == 'P3')
-    
+        elif self.scheduleType == 'Timed' and self.scheduleSubType == 'NA':
+            # North America
+            return (self.currentSchedulePeriod.get('period') == 'Away')
+        elif self.scheduleType == 'Timed' and self.scheduleSubType == 'EMEA':
+            # Europe, Middle-East, Africa
+            return (self.currentSchedulePeriod.get('period') == 'P3')
+
     @property
     def vacationHold(self):
-        if 'vacationHold' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['vacationHold']['enabled']
+        return self.device.get('vacationHold').get('enabled')
 
     @property
     def where(self):
@@ -322,50 +346,49 @@ class Thermostat(lyricDevice):
 
     @property
     def units(self):
-        if 'units' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['units']
+        return self.device.get('units')
 
     @property
     def indoorTemperature(self):
-        if 'indoorTemperature' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['indoorTemperature']
+        return self.device.get('indoorTemperature')
 
     @property
     def heatSetpoint(self):
-        return self.changeableValues['heatSetpoint']
+        return self.changeableValues.get('heatSetpoint')
 
     @property
     def coolSetpoint(self):
-        return self.changeableValues['coolSetpoint']
+        return self.changeableValues.get('coolSetpoint')
 
     @property
     def thermostatSetpointStatus(self):
-        if 'thermostatSetpointStatus' in self.changeableValues:
-            return self.changeableValues['thermostatSetpointStatus']
+        return self.changeableValues.get('thermostatSetpointStatus')
 
     @thermostatSetpointStatus.setter
     def thermostatSetpointStatus(self, thermostatSetpointStatus):
-        self.updateThermostat(thermostatSetpointStatus=thermostatSetpointStatus)
+        self.updateThermostat(
+            thermostatSetpointStatus=thermostatSetpointStatus)
 
-    def thermostatSetpointHoldUntil(self, nextPeriodTime, heatSetpoint=None, coolSetpoint=None):
+    def thermostatSetpointHoldUntil(self, nextPeriodTime, heatSetpoint=None,
+                                    coolSetpoint=None):
         if (nextPeriodTime is None):
             raise ValueError('nextPeriodTime is required')
-        self.updateThermostat(heatSetpoint=heatSetpoint, coolSetpoint=coolSetpoint, thermostatSetpointStatus='HoldUntil', nextPeriodTime=nextPeriodTime)
+        self.updateThermostat(heatSetpoint=heatSetpoint,
+                              coolSetpoint=coolSetpoint,
+                              thermostatSetpointStatus='HoldUntil',
+                              nextPeriodTime=nextPeriodTime)
 
     @property
     def nextPeriodTime(self):
-        if 'nextPeriodTime' in self.changeableValues:
-            return self.changeableValues['nextPeriodTime']
+        return self.changeableValues.get('nextPeriodTime')
 
     @property
-    def AutoChangeover(self):
-        if 'AutoChangeover' in self.changeableValues:
-            return self.changeableValues['AutoChangeover']
+    def auto_changeover(self):
+        return self.changeableValues.get('AutoChangeover')
 
     @property
     def operationMode(self):
-        if 'mode' in self.changeableValues:
-            return self.changeableValues['mode']
+        return self.changeableValues.get('mode')
 
     @operationMode.setter
     def operationMode(self, mode):
@@ -374,25 +397,28 @@ class Thermostat(lyricDevice):
     @property
     def temperatureSetpoint(self):
         if self.operationMode == 'Heat':
-            return self.changeableValues['heatSetpoint']
+            return self.changeableValues.get('heatSetpoint')
         else:
-            return self.changeableValues['coolSetpoint']
+            return self.changeableValues.get('coolSetpoint')
 
     @temperatureSetpoint.setter
     def temperatureSetpoint(self, setpoint):
-        
-        if self.thermostatSetpointStatus=='NoHold':
+
+        if self.thermostatSetpointStatus == 'NoHold':
             thermostatSetpointStatus = 'TemporaryHold'
         else:
             thermostatSetpointStatus = self.thermostatSetpointStatus
 
         if isinstance(setpoint, tuple):
-        # if self.operationMode=='Auto':
-            self.updateThermostat(coolSetpoint=setpoint[0], heatSetpoint=setpoint[1], thermostatSetpointStatus=thermostatSetpointStatus)
-        elif self.operationMode=='Cool':
-            self.updateThermostat(coolSetpoint=setpoint, thermostatSetpointStatus=thermostatSetpointStatus)
-        elif self.operationMode=='Heat':
-            self.updateThermostat(heatSetpoint=setpoint, thermostatSetpointStatus=thermostatSetpointStatus)
+            self.updateThermostat(coolSetpoint=setpoint[0],
+                                  heatSetpoint=setpoint[1],
+                                  thermostatSetpointStatus=thermostatSetpointStatus)
+        elif self.operationMode == 'Cool':
+            self.updateThermostat(coolSetpoint=setpoint,
+                                  thermostatSetpointStatus=thermostatSetpointStatus)
+        elif self.operationMode == 'Heat':
+            self.updateThermostat(heatSetpoint=setpoint,
+                                  thermostatSetpointStatus=thermostatSetpointStatus)
 
     @property
     def can_heat(self):
@@ -408,43 +434,35 @@ class Thermostat(lyricDevice):
 
     @property
     def outdoorTemperature(self):
-        if 'outdoorTemperature' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['outdoorTemperature']
+        return self.device.get('outdoorTemperature')
 
     @property
     def allowedModes(self):
-        if 'allowedModes' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['allowedModes']
+        return self.device.get('allowedModes')
 
     @property
     def deadband(self):
-        if 'deadband' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['deadband']
+        return self.device.get('deadband')
 
     @property
     def hasDualSetpointStatus(self):
-        if 'hasDualSetpointStatus' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['hasDualSetpointStatus']
+        return self.device.get('hasDualSetpointStatus')
 
     @property
     def minHeatSetpoint(self):
-        if 'minHeatSetpoint' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['minHeatSetpoint']
+        return self.device.get('minHeatSetpoint')
 
     @property
     def maxHeatSetpoint(self):
-        if 'maxHeatSetpoint' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['maxHeatSetpoint']
+        return self.device.get('maxHeatSetpoint')
 
     @property
     def minCoolSetpoint(self):
-        if 'minCoolSetpoint' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['minCoolSetpoint']
+        return self.device.get('minCoolSetpoint')
 
     @property
     def maxCoolSetpoint(self):
-        if 'maxCoolSetpoint' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['maxCoolSetpoint']
+        return self.device.get('maxCoolSetpoint')
 
     @property
     def maxSetpoint(self):
@@ -459,191 +477,157 @@ class Thermostat(lyricDevice):
             return self.minCoolSetpoint
         else:
             return self.minHeatSetpoint
-        
+
     @property
     def changeableValues(self):
-        if 'changeableValues' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['changeableValues']
+        return self.device.get('changeableValues')
 
     @property
     def operationStatus(self):
-        if 'operationStatus' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['operationStatus']
+        return self.device.get('operationStatus')
 
     @property
     def smartAway(self):
-        if 'smartAway' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['smartAway']
+        return self.device.get('smartAway')
 
     @property
     def indoorHumidity(self):
-        if 'indoorHumidity' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['indoorHumidity']
+        return self.device.get('indoorHumidity')
 
     @property
     def indoorHumidityStatus(self):
-        if 'indoorHumidityStatus' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['indoorHumidityStatus']
+        return self.device.get('indoorHumidityStatus')
 
     @property
     def isAlive(self):
-        if 'isAlive' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['isAlive']
+        return self.device.get('isAlive')
 
     @property
     def isUpgrading(self):
-        if 'isUpgrading' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['isUpgrading']
+        return self.device.get('isUpgrading')
 
     @property
     def isProvisioned(self):
-        if 'isProvisioned' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['isProvisioned']
+        return self.device.get('isProvisioned')
 
     @property
     def settings(self):
-        if 'settings' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['settings']
+        return self.device.get('settings')
 
     @property
     def fanMode(self):
-        if self.settings and 'fan' in self.settings:
-            return self.settings["fan"]["changeableValues"]["mode"]
+        if self.settings and 'fan' in self.settings and 'changeableValues' in self.settings.get('fan'):
+            return self.settings.get('fan').get('changeableValues').get('mode')
 
     @property
     def macID(self):
-        if 'macID' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['macID']
+        return self.device.get('macID')
 
     @property
     def scheduleStatus(self):
-        if 'scheduleStatus' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['scheduleStatus']
+        return self.device.get('scheduleStatus')
 
     @property
     def allowedTimeIncrements(self):
-        if 'allowedTimeIncrements' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['allowedTimeIncrements']
+        return self.device.get('allowedTimeIncrements')
 
     @property
     def thermostatVersion(self):
-        if 'thermostatVersion' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['thermostatVersion']
+        return self.device.get('thermostatVersion')
 
     @property
     def isRegistered(self):
-        if 'isRegistered' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['isRegistered']
+        return self.device.get('isRegistered')
 
     @property
     def devicesettings(self):
-        if 'devicesettings' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['devicesettings']
+        return self.device.get('devicesettings')
 
     @property
     def displayedOutdoorHumidity(self):
-        if 'displayedOutdoorHumidity' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['displayedOutdoorHumidity']
+        return self.device.get('displayedOutdoorHumidity')
 
     @property
     def currentSchedulePeriod(self):
-        if 'currentSchedulePeriod' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['currentSchedulePeriod']
+        return self.device.get('currentSchedulePeriod')
 
     @property
     def scheduleCapabilities(self):
-        if 'scheduleCapabilities' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['scheduleCapabilities']
+        return self.device.get('scheduleCapabilities')
 
     @property
     def scheduleType(self):
-        if 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId) and 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']:
-            return self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']['scheduleType']
-        elif 'schedule' in self._lyric_api._device(self._locationId, self._deviceId) and 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId)['schedule']:
-            return self._lyric_api._device(self._locationId, self._deviceId)['schedule']['scheduleType']
+        if 'scheduleType' in self.device and 'scheduleType' in self.device['scheduleType']:
+            return self.device.get('scheduleType').get('scheduleType')
+        elif 'schedule' in self.device and 'scheduleType' in self.device['schedule']:
+            return self.device.get('schedule').get('scheduleType')
 
     @property
     def scheduleSubType(self):
-        if 'scheduleType' in self._lyric_api._device(self._locationId, self._deviceId) and 'scheduleSubType' in self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']:
-            return self._lyric_api._device(self._locationId, self._deviceId)['scheduleType']['scheduleSubType']
+        return self.device.get('scheduleType').get('scheduleSubType')
 
 
 class WaterLeakDetector(lyricDevice):
 
     @property
     def waterPresent(self):
-        if 'waterPresent' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['waterPresent']
+            return self.device.get('waterPresent')
 
     @property
     def currentSensorReadings(self):
-        if 'currentSensorReadings' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['currentSensorReadings']
+            return self.device.get('currentSensorReadings')
 
     @property
     def currentAlarms(self):
-        if 'currentAlarms' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['currentAlarms']
+            return self.device.get('currentAlarms')
 
     @property
     def lastCheckin(self):
-        if 'lastCheckin' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['lastCheckin']
+            return self.device.get('lastCheckin')
 
     @property
     def lastDeviceSettingUpdatedOn(self):
-        if 'lastDeviceSettingUpdatedOn' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['lastDeviceSettingUpdatedOn']
+            return self.device.get('lastDeviceSettingUpdatedOn')
 
     @property
     def batteryRemaining(self):
-        if 'batteryRemaining' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['batteryRemaining']
+            return self.device.get('batteryRemaining')
 
     @property
     def isRegistered(self):
-        if 'isRegistered' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['isRegistered']
+            return self.device.get('isRegistered')
 
     @property
     def hasDeviceCheckedIn(self):
-        if 'hasDeviceCheckedIn' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['hasDeviceCheckedIn']
+            return self.device.get('hasDeviceCheckedIn')
 
     @property
     def isDeviceOffline(self):
-        if 'isDeviceOffline' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['isDeviceOffline']
+            return self.device.get('isDeviceOffline')
 
     @property
     def firstFailedAttemptTime(self):
-        if 'firstFailedAttemptTime' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['firstFailedAttemptTime']
+            return self.device.get('firstFailedAttemptTime')
 
     @property
     def failedConnectionAttempts(self):
-        if 'failedConnectionAttempts' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['failedConnectionAttempts']
+            return self.device.get('failedConnectionAttempts')
 
     @property
     def wifiSignalStrength(self):
-        if 'wifiSignalStrength' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['wifiSignalStrength']
+            return self.device.get('wifiSignalStrength')
 
     @property
     def isFirmwareUpdateRequired(self):
-        if 'isFirmwareUpdateRequired' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['isFirmwareUpdateRequired']
+            return self.device.get('isFirmwareUpdateRequired')
 
     @property
     def time(self):
-        if 'time' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['time']
+            return self.device.get('time')
 
     @property
     def deviceSettings(self):
-        if 'deviceSettings' in self._lyric_api._device(self._locationId, self._deviceId):
-            return self._lyric_api._device(self._locationId, self._deviceId)['deviceSettings']
+            return self.device.get('deviceSettings')
 
 
 class Lyric(object):
@@ -653,9 +637,9 @@ class Lyric(object):
                  local_time=False, app_name=None, redirect_uri=None):
         self._client_id = client_id
         self._client_secret = client_secret
-        self._app_name=app_name
-        self._redirect_uri=redirect_uri
-        self._token = token;
+        self._app_name = app_name
+        self._redirect_uri = redirect_uri
+        self._token = token
         self._token_cache_file = token_cache_file
         self._cache_ttl = cache_ttl
         self._cache = {}
@@ -664,7 +648,7 @@ class Lyric(object):
 
         if token is None and token_cache_file is None and redirect_uri is None:
             print('You need to supply a token or a cached token file,'
-            'or define a redirect uri')
+                  'or define a redirect uri')
         else:
             self._lyricAuth()
 
@@ -685,7 +669,7 @@ class Lyric(object):
     @property
     def token(self):
         self._token
-    
+
     @property
     def authorized(self):
         self._lyricApi.authorized
@@ -724,8 +708,8 @@ class Lyric(object):
 
     def _lyricAuth(self):
         if (self._token_cache_file is not None and
-                    self._token is None and
-                    os.path.exists(self._token_cache_file)):
+            self._token is None and
+            os.path.exists(self._token_cache_file)):
                 with open(self._token_cache_file, 'r') as f:
                     self._token = json.load(f)
 
@@ -733,14 +717,14 @@ class Lyric(object):
             # force token refresh
             self._token['expires_at'] = time.time() - 10
             self._token['expires_in'] = '-30'
-            
+
             self._lyricApi = OAuth2Session(self._client_id, token=self._token,
                                            auto_refresh_url=REFRESH_URL,
                                            token_updater=self._token_saver)
 
     def _lyricReauth(self):
         if (self._token_cache_file is not None and
-                    self._token is None and
+                    self._token is None and 
                     os.path.exists(self._token_cache_file)):
                 with open(self._token_cache_file, 'r') as f:
                     self._token = json.load(f)
@@ -748,14 +732,15 @@ class Lyric(object):
         if self._token is not None:
             auth = requests.auth.HTTPBasicAuth(self._client_id, self._client_secret)
             headers = {'Accept': 'application/json'}
-            
+
             self._lyricApi = OAuth2Session(self._client_id, token=self._token,
                                            auto_refresh_url=REFRESH_URL,
                                            token_updater=self._token_saver)
 
             token = self._lyricApi.refresh_token(REFRESH_URL,
-                    refresh_token=self._token["refresh_token"], headers=headers,
-                    auth=auth)
+                                                 refresh_token=self._token.get("refresh_token"),
+                                                 headers=headers,
+                                                 auth=auth)
             self._token_saver(token)
 
     def _get(self, endpoint, **params):
@@ -764,7 +749,7 @@ class Lyric(object):
         url = BASE_URL + endpoint + '?' + query_string
         try:
             response = self._lyricApi.get(url, client_id=self._client_id,
-                                         client_secret=self._client_secret)
+                                          client_secret=self._client_secret)
             response.raise_for_status()
             return response.json()
         except requests.HTTPError as e:
@@ -808,7 +793,7 @@ class Lyric(object):
 
     def _location(self, locationId):
         for location in self._locations:
-            if location['locationID'] == locationId:
+            if location.get('locationID') == locationId:
                 return location
 
     @property
@@ -823,27 +808,27 @@ class Lyric(object):
                 self._cache[cache_key] = (new_value, now)
                 return new_value
             else:
-                self._cache[cache_key] = (value, last_update + 5) # try again in 5 seconds
+                self._cache[cache_key] = (value, last_update + 5)  # try again in 5 seconds
 
         return value
 
     def _user(self, locationId, userId):
         for user in self._users(locationId):
-            if user['userID'] == userId:
+            if user.get('userID') == userId:
                 return user
 
     def _users(self, locationId):
-        value = self._location(locationId)['users']
+        value = self._location(locationId).get('users')
         return value
 
     def _device(self, locationId, deviceId):
         for device in self._devices(locationId):
-            if device['deviceID'] == deviceId:
+            if device.get('deviceID') == deviceId:
                 return device
 
     def _devices(self, locationId, forceGet=False):
         if forceGet:
-            cache_key = 'devices-%s' %locationId
+            cache_key = 'devices-%s' % locationId
             value, last_update = self._checkCache(cache_key)
             now = time.time()
 
@@ -853,8 +838,8 @@ class Lyric(object):
                     self._cache[cache_key] = (new_value, now)
                     return new_value
         else:
-            if self._location(locationId) and 'devices' in self._location(locationId):
-                return self._location(locationId)['devices']
+            if self._location(locationId):
+                return self._location(locationId).get('devices')
             else:
                 return None
 
@@ -862,7 +847,7 @@ class Lyric(object):
 
     def _device_type(self, locationId, deviceType, deviceId):
         for device in self._devices_type(deviceType, locationId):
-            if device['deviceID'] == deviceId:
+            if device.get('deviceID') == deviceId:
                 return device
 
     def _devices_type(self, deviceType, locationId):
