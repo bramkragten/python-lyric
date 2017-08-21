@@ -6,8 +6,7 @@ import logging
 import requests
 #import json
 from requests.compat import json
-from requests_oauthlib import OAuth2Session, TokenUpdated
-from oauthlib.oauth2 import TokenExpiredError
+from requests_oauthlib import OAuth2Session
 import urllib.parse
 
 _LOGGER = logging.getLogger(__name__)
@@ -731,6 +730,10 @@ class Lyric(object):
                     self._token = json.load(f)
 
         if self._token is not None:
+            # force token refresh
+            self._token['expires_at'] = time.time() - 10
+            self._token['expires_in'] = '-30'
+            
             self._lyricApi = OAuth2Session(self._client_id, token=self._token,
                                            auto_refresh_url=REFRESH_URL,
                                            token_updater=self._token_saver)
@@ -764,13 +767,6 @@ class Lyric(object):
                                          client_secret=self._client_secret)
             response.raise_for_status()
             return response.json()
-        except TokenUpdated as e:
-            _LOGGER.debug("Token Updated Lyric API: %s" % e)
-            self._token_saver(e.token)
-        except TokenExpiredError as e:
-            _LOGGER.warning("Token Expired Lyric API: %s" % e)
-            self._lyricReauth()
-            self._get(endpoint, params)
         except requests.HTTPError as e:
             _LOGGER.error("HTTP Error Lyric API: %s" % e)
             if e.response.status_code == 401:
@@ -788,13 +784,6 @@ class Lyric(object):
                                            client_secret=self._client_secret)
             response.raise_for_status()
             return response.status_code
-        except TokenUpdated as e:
-            _LOGGER.debug("Token Updated Lyric API: %s" % e)
-            self._token_saver(e.token)
-        except TokenExpiredError as e:
-            _LOGGER.warning("Token Expired Lyric API: %s" % e)
-            self._lyricReauth()
-            self._post(endpoint, data, params)
         except requests.HTTPError as e:
             _LOGGER.error("HTTP Error Lyric API: %s" % e)
             if e.response.status_code == 401:
@@ -864,7 +853,7 @@ class Lyric(object):
                     self._cache[cache_key] = (new_value, now)
                     return new_value
         else:
-            if self._locations:
+            if self._locations and devices in self._locations:
                 return self._location(locationId)['devices']
             else:
                 return None
