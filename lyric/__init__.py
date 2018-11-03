@@ -3,7 +3,7 @@
 import os
 import time
 import logging
-import requests
+from requests.auth import HTTPBasicAuth
 from requests.compat import json
 from requests_oauthlib import OAuth2Session
 import urllib.parse
@@ -687,7 +687,7 @@ class Lyric(object):
         return authorization_url
 
     def authorization_response(self, authorization_response):
-        auth = requests.auth.HTTPBasicAuth(self._client_id, self._client_secret)
+        auth = HTTPBasicAuth(self._client_id, self._client_secret)
         headers = {'Accept': 'application/json'}
 
         token = self._lyricApi.fetch_token(
@@ -697,7 +697,7 @@ class Lyric(object):
         self._token_saver(token)
 
     def authorization_code(self, code, state):
-        auth = requests.auth.HTTPBasicAuth(self._client_id, self._client_secret)
+        auth = HTTPBasicAuth(self._client_id, self._client_secret)
         headers = {'Accept': 'application/json'}
 
         token = self._lyricApi.fetch_token(
@@ -730,7 +730,7 @@ class Lyric(object):
                     self._token = json.load(f)
 
         if self._token is not None:
-            auth = requests.auth.HTTPBasicAuth(self._client_id, self._client_secret)
+            auth = HTTPBasicAuth(self._client_id, self._client_secret)
             headers = {'Accept': 'application/json'}
 
             self._lyricApi = OAuth2Session(self._client_id, token=self._token,
