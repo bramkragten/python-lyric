@@ -404,7 +404,7 @@ class Thermostat(lyricDevice):
     @temperatureSetpoint.setter
     def temperatureSetpoint(self, setpoint):
 
-        if self.thermostatSetpointStatus == 'NoHold':
+        if self.thermostatSetpointStatus in ['NoHold', 'HoldUntil']:
             thermostatSetpointStatus = 'TemporaryHold'
         else:
             thermostatSetpointStatus = self.thermostatSetpointStatus
