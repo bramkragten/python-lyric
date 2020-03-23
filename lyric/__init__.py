@@ -984,19 +984,19 @@ class Lyric(object):
                 ),
                 "w",
             ) as f:
-                json.dump(token, f)
+                return json.dump(token, f)
 
     @property
     def token(self):
         """Return token."""
 
-        self._token
+        return self._token
 
     @property
     def authorized(self):
         """Return authorized."""
 
-        self._lyricApi.authorized
+        return self._lyricApi.authorized
 
     @property
     def getauthorize_url(self):
